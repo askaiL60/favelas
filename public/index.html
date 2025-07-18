@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Formulaire Concours - Édition Bandrélé</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h2>Formulaire de participation - <span id="edition">Édition Bandrélé</span></h2>
+
+  <form id="formulaire">
+    <label for="prenom">Prénom :</label><br>
+    <input type="text" id="prenom" placeholder="" required><br><br>
+
+    <label for="pseudo">Identifiant Instagram :</label><br>
+    <input type="text" id="pseudo" placeholder="" required><br><br>
+
+    <label for="village">Village :</label><br>
+    <select id="village" required>
+      <option value="">Sélectionnez votre village</option>
+    </select><br><br>
+
+    <label for="taille">Taille :</label><br>
+    <select id="taille" required>
+      <option value="">Choisissez une taille</option>
+      <option value="S">S</option>
+      <option value="M">M</option>
+      <option value="L">L</option>
+      <option value="XL">XL</option>
+    </select><br><br>
+
+    <button type="submit">Envoyer</button>
+  </form>
+
+  <p id="confirmation"></p>
+
+  <h3>Participants inscrits</h3>
+  <div id="participants-list"></div>
+
+  <script src="script.js"></script>
+  <div class="filigrane">
+  <img src="images/favelas.png" alt="Logo Favelas">
+</div>
+
+</body>
+</html>
