@@ -42,8 +42,8 @@ app.post('/submit', (req, res) => {
       return res.status(409).json({ message: "Tu as déjà participé !" });
     }
 
-    // Insertion
-    const sql = "INSERT INTO participants (prenom, pseudo, village, taille) VALUES (?, ?, ?, ?)";
+    // Insertion avec date automatique
+    const sql = "INSERT INTO participants (prenom, pseudo, village, taille, date_participation) VALUES (?, ?, ?, ?, NOW())";
     db.query(sql, [prenom, pseudo, village, taille], (err2) => {
       if (err2) return res.status(500).json({ message: "Erreur lors de l'enregistrement" });
       res.status(200).json({ message: "Participation enregistrée !" });
