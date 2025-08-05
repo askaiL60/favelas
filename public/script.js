@@ -32,7 +32,15 @@ document.getElementById('formulaire').addEventListener('submit', async (e) => {
   });
 
   const data = await res.json();
-  document.getElementById('confirmation').innerText = data.message;
+  const confirmation = document.getElementById('confirmation');
+  confirmation.innerText = data.message;
+
+if (res.status === 409) {
+  confirmation.style.color = "red";  // texte en rouge
+} else {
+  confirmation.style.color = "green"; // pour succès par ex.
+}
+
 
   if (res.ok) {
     fetchParticipants(); // recharger la liste
