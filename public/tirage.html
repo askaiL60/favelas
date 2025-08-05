@@ -34,7 +34,7 @@
     let winners = [];
 
     async function fetchParticipants() {
-      const res = await fetch('/api/participants');
+      const res = await fetch('https://favelas-production.up.railway.app/api/participants');
       participants = await res.json();
       drawWheel();
     }
