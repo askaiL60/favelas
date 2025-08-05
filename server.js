@@ -15,7 +15,7 @@ const db = mysql.createConnection({
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
   database: process.env.MYSQLDATABASE,
-  port: process.env.MYSQLPORT // ⚠️ c'est le port MySQL fourni par Railway (ex: 35188)
+  port: process.env.MYSQLPORT // Port MySQL fourni par Railway (ex: 35188)
 });
 
 // Vérifier la connexion MySQL
@@ -51,16 +51,19 @@ app.post('/submit', (req, res) => {
   });
 });
 
-// Route GET : participants
+// Nouvelle Route GET : tous les participants (avec date_participation)
 app.get('/api/participants', (req, res) => {
-  db.query('SELECT prenom, pseudo, village FROM participants', (err, results) => {
-    if (err) return res.status(500).json({ error: 'Erreur serveur' });
+  db.query('SELECT * FROM participants', (err, results) => {
+    if (err) {
+      console.error("❌ Erreur lors de la récupération des participants :", err);
+      return res.status(500).json({ error: 'Erreur serveur' });
+    }
     res.json(results);
   });
 });
 
 // Démarrage du serveur Web
-const PORT = process.env.PORT || 3000; // ⚠️ c'est le port du serveur web, Railway le définit automatiquement
+const PORT = process.env.PORT || 3000; // Port du serveur web (Railway le définit)
 app.listen(PORT, () => {
-  console.log(`Serveur lancé sur le port ${PORT}`);
+  console.log(`🚀 Serveur lancé sur le port ${PORT}`);
 });
