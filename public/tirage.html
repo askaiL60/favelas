@@ -10,36 +10,71 @@
   <h2>Tirage des gagnants - <span id="edition">Édition Bandrélé</span></h2>
 
   <div id="wheel-container">
-<div id="arrow-container">
-  <div class="arrow-border"></div>
-  <div class="arrow-core"></div>
-</div>
+    <div id="arrow-container">
+      <div class="arrow-border"></div>
+      <div class="arrow-core"></div>
+    </div>
 
     <canvas id="wheel" width="400" height="400"></canvas>
     <div id="logo-center"></div>
   </div>
 
-  <button onclick="spin()">Lancer le tirage</button>
+  <button id="spinBtn" disabled>Lancer le tirage</button>
 
   <h3>Liste des gagnants</h3>
   <div id="winner"></div>
 
   <script>
+    const API_URL = 'https://favelas-production.up.railway.app/api/participants';
+    const VILLAGE = 'Bandrele'; // mettre null pour tous les villages
+
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
     const radius = canvas.width / 2;
+
     let participants = [];
     let angleStart = 0;
     let isSpinning = false;
     let winners = [];
 
+    function safeText(text) { return (text || '').toString().trim(); }
+
     async function fetchParticipants() {
-      const res = await fetch('https://favelas-production.up.railway.app/api/participants');
-      participants = await res.json();
-      drawWheel();
+      try {
+        const res = await fetch(API_URL, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const rows = await res.json();
+
+        // Filtre + dédoublonnage
+        const seen = new Set();
+        participants = rows
+          .filter(r => !VILLAGE || r.village === VILLAGE)
+          .filter(r => {
+            const key = safeText(r.pseudo).toLowerCase();
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .map(r => ({ pseudo: safeText(r.pseudo), prenom: safeText(r.prenom) }));
+
+        drawWheel();
+        document.getElementById('spinBtn').disabled = participants.length < 1;
+
+        if (participants.length < 2) {
+          console.warn('Pas assez de participants pour un tirage.');
+        }
+      } catch (e) {
+        console.error('Erreur lors du chargement des participants :', e);
+        alert('Impossible de charger la liste des participants.');
+      }
     }
 
     function drawWheel(highlightIndex = null, blinking = false) {
+      if (participants.length === 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
       const arc = 2 * Math.PI / participants.length;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -58,14 +93,14 @@
           ctx.fillStyle = "#ccc";
         }
 
-        // Dessiner segment
+        // segment
         ctx.beginPath();
         ctx.moveTo(radius, radius);
         ctx.arc(radius, radius, radius, angle, angle + arc);
         ctx.lineTo(radius, radius);
         ctx.fill();
 
-        // Séparateur
+        // séparateur
         ctx.strokeStyle = "#666";
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -76,7 +111,7 @@
         );
         ctx.stroke();
 
-        // Texte
+        // texte pseudo
         ctx.save();
         ctx.translate(radius, radius);
         ctx.rotate(angle + arc / 2);
@@ -89,7 +124,7 @@
     }
 
     function spin() {
-      if (isSpinning || participants.length < 2 || winners.length >= 2) return;
+      if (isSpinning || participants.length < 1) return;
 
       isSpinning = true;
       let winnerIndex;
@@ -120,14 +155,14 @@
           document.getElementById('winner').innerHTML +=
             `Gagnant ${winners.length} : <b>${winner.pseudo}</b> (${winner.prenom})<br>`;
 
-          // Faire clignoter le gagnant 2 sec
+          // clignotement
           let blinkCount = 0;
           const blinkInterval = setInterval(() => {
             drawWheel(winnerIndex, true);
             blinkCount++;
             if (blinkCount >= 6) {
               clearInterval(blinkInterval);
-              drawWheel(); // ensuite jaune stable
+              drawWheel();
             }
           }, 300);
 
@@ -135,6 +170,8 @@
         }
       }, interval);
     }
+
+    document.getElementById('spinBtn').addEventListener('click', spin);
 
     fetchParticipants();
   </script>
