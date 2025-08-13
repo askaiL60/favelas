@@ -7,7 +7,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
   villageBandrele.sort().forEach(v => {
     const opt = document.createElement("option");
-    opt.value = v;              // ← ESSENTIEL !
+    opt.value = v;
     opt.textContent = v;
     villageSelect.appendChild(opt);
   });
@@ -15,15 +15,14 @@ window.addEventListener("DOMContentLoaded", () => {
   fetchParticipants();
 });
 
-
 // Envoi du formulaire
 document.getElementById('formulaire').addEventListener('submit', async (e) => {
   e.preventDefault();
 
-  const prenom = document.getElementById('prenom').value;
-  const pseudo = document.getElementById('pseudo').value;
+  const prenom  = document.getElementById('prenom').value.trim();
+  const pseudo  = document.getElementById('pseudo').value.trim();
   const village = document.getElementById('village').value;
-  const taille = document.getElementById('taille').value;
+  const taille  = document.getElementById('taille').value;
 
   const res = await fetch('/submit', {
     method: 'POST',
@@ -35,31 +34,41 @@ document.getElementById('formulaire').addEventListener('submit', async (e) => {
   const confirmation = document.getElementById('confirmation');
   confirmation.innerText = data.message;
 
-if (res.status === 409) {
-  confirmation.style.color = "red";  // texte en rouge
-} else {
-  confirmation.style.color = "green"; // pour succès par ex.
-}
-
+  if (res.status === 409) {
+    confirmation.style.color = "red";    // déjà participé
+  } else {
+    confirmation.style.color = "green";  // succès
+  }
 
   if (res.ok) {
-    fetchParticipants(); // recharger la liste
-    document.getElementById('formulaire').reset(); // réinitialiser le formulaire
+    await fetchParticipants();                  // recharger la liste
+    document.getElementById('formulaire').reset();
   }
 });
 
-// Récupérer et afficher les participants
+// Récupérer et afficher les participants + MAJ compteur
 async function fetchParticipants() {
-  const res = await fetch('/api/participants');
-  const data = await res.json();
+  try {
+    const res = await fetch('/api/participants');
+    const data = await res.json();
 
-  const container = document.getElementById('participants-list');
-  container.innerHTML = '';
+    const container = document.getElementById('participants-list');
+    container.innerHTML = '';
 
-  data.forEach(p => {
-    const div = document.createElement('div');
-    div.className = "participant";
-div.innerHTML = `${p.prenom} (@${p.pseudo}), ${p.village}`;
-    container.appendChild(div);
-  });
+    data.forEach(p => {
+      const div = document.createElement('div');
+      div.className = "participant";
+      div.innerHTML = `${p.prenom} (@${p.pseudo}), ${p.village}`;
+      container.appendChild(div);
+    });
+
+    // ➜ Met à jour le badge compteur à côté du titre
+    const badge = document.getElementById('count-badge');
+    if (badge) {
+      badge.textContent = data.length;
+      badge.title = `${data.length} inscrit${data.length > 1 ? 's' : ''}`;
+    }
+  } catch (e) {
+    console.error(e);
+  }
 }
