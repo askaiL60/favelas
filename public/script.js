@@ -1,11 +1,10 @@
-const villageBandrele = [
-  "Bambo Est", "Bandrele", "Dapani", "Hamouro", "Mgnambani", "Mtsamoudou", "Nyambadao"
+const villagePT = [ "Dzaoudzi", "Labattoir", "Pamandzi"
 ];
 
 window.addEventListener("DOMContentLoaded", () => {
   const villageSelect = document.getElementById("village");
 
-  villageBandrele.sort().forEach(v => {
+  villagePT.sort().forEach(v => {
     const opt = document.createElement("option");
     opt.value = v;
     opt.textContent = v;
