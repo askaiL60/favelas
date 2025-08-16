@@ -53,7 +53,7 @@ app.post('/submit', (req, res) => {
       }
 
       // 3) Insertion dans la table actuelle participants_PT
-      const sql = "INSERT INTO participants_PT (prenom, pseudo, village, taille, date_participation) VALUES (?, ?, ?, ?, NOW())";
+      const sql = "INSERT INTO participants_PT (prenom, pseudo, village, taille) VALUES (?, ?, ?, ?, NOW())";
       db.query(sql, [prenom, pseudo, village, taille], (err3) => {
         if (err3) return res.status(500).json({ message: "Erreur lors de l'enregistrement" });
         res.status(200).json({ message: "Participation enregistrée !" });
