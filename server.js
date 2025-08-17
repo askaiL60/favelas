@@ -28,7 +28,7 @@ db.connect(err => {
 });
 
 // -------------------------
-// POST /submit (CHANGÉ)
+// POST /submit : inscription
 // -------------------------
 app.post('/submit', (req, res) => {
   const { prenom, pseudo, village, taille } = req.body;
@@ -37,26 +37,35 @@ app.post('/submit', (req, res) => {
     return res.status(400).json({ message: "Champs manquants" });
   }
 
-  // 1) Vérifie si déjà inscrit dans l’ancienne édition
+  // 1) Vérifie si déjà inscrit dans l'ancienne édition (table participants)
   db.query('SELECT id FROM participants WHERE pseudo = ? LIMIT 1', [pseudo], (err, r1) => {
-    if (err) return res.status(500).json({ message: "Erreur DB (check ancienne table)" });
+    if (err) {
+      console.error("❌ Erreur DB (check ancienne table):", err);
+      return res.status(500).json({ message: "Erreur DB (check ancienne table)" });
+    }
 
     if (r1.length > 0) {
       return res.status(409).json({ message: "Tu as déjà participé à une édition précédente !" });
     }
 
-    // 2) Vérifie si déjà inscrit cette semaine
+    // 2) Vérifie si déjà inscrit dans l'édition en cours (table participants_PT)
     db.query('SELECT id FROM participants_PT WHERE pseudo = ? LIMIT 1', [pseudo], (err2, r2) => {
-      if (err2) return res.status(500).json({ message: "Erreur DB (check table actuelle)" });
+      if (err2) {
+        console.error("❌ Erreur DB (check table actuelle):", err2);
+        return res.status(500).json({ message: "Erreur DB (check table actuelle)" });
+      }
 
       if (r2.length > 0) {
         return res.status(409).json({ message: "Tu as déjà participé cette semaine !" });
       }
 
-      // 3) Insère dans la table de la semaine (PAS de colonne date ici)
+      // 3) Sinon on insère dans participants_PT
       const sql = "INSERT INTO participants_PT (prenom, pseudo, village, taille) VALUES (?, ?, ?, ?)";
       db.query(sql, [prenom, pseudo, village, taille], (err3) => {
-        if (err3) return res.status(500).json({ message: "Erreur lors de l'enregistrement" });
+        if (err3) {
+          console.error("❌ Erreur INSERT participants_PT:", err3);
+          return res.status(500).json({ message: "Erreur lors de l'enregistrement" });
+        }
         res.status(200).json({ message: "Participation enregistrée !" });
       });
     });
@@ -64,10 +73,9 @@ app.post('/submit', (req, res) => {
 });
 
 // -------------------------
-// GET /api/participants (CHANGÉ)
+// GET /api/participants : liste des inscrits de la semaine
 // -------------------------
 app.get('/api/participants', (req, res) => {
-  // On évite date_participation pour ne pas casser si la colonne n'existe pas
   db.query('SELECT * FROM participants_PT ORDER BY id DESC', (err, results) => {
     if (err) {
       console.error("❌ Erreur lors de la récupération des participants :", err);
@@ -77,8 +85,10 @@ app.get('/api/participants', (req, res) => {
   });
 });
 
+// -------------------------
 // Démarrage du serveur Web
-const PORT = process.env.PORT || 3000; // Port du serveur web (Railway le définit)
+// -------------------------
+const PORT = process.env.PORT || 3000; // Port Railway
 app.listen(PORT, () => {
   console.log(`🚀 Serveur lancé sur le port ${PORT}`);
 });
