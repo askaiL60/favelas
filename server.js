@@ -30,7 +30,13 @@ db.connect(err => {
 // POST /submit : inscription
 // -------------------------
 app.post('/submit', (req, res) => {
-  const { prenom, pseudo, village, taille } = req.body;
+  let { prenom, pseudo, village, taille } = req.body;
+
+  // small sanitation
+  prenom = (prenom || '').trim();
+  pseudo = (pseudo || '').trim();
+  village = (village || '').trim();
+  taille = (taille || '').trim();
 
   if (!prenom || !pseudo || !village || !taille) {
     return res.status(400).json({ message: "Champs manquants" });
@@ -62,12 +68,8 @@ app.post('/submit', (req, res) => {
             return res.status(409).json({ message: "Tu as déjà participé cette semaine !" });
           }
 
-          // 3) insérer dans la table de la semaine en cours
-          //    ⚠️ date_participation est de type DATE -> on utilise CURDATE()
-          const sql = `
-            INSERT INTO participants_PT (prenom, pseudo, village, taille, date_participation)
-            VALUES (?, ?, ?, ?, CURDATE())
-          `;
+          // 3) insérer dans la table de la semaine en cours (SANS date_participation)
+          const sql = "INSERT INTO participants_PT (prenom, pseudo, village, taille) VALUES (?, ?, ?, ?)";
           db.query(sql, [prenom, pseudo, village, taille], (err3) => {
             if (err3) {
               console.error("❌ INSERT participants_PT:", err3.sqlMessage || err3);
@@ -85,7 +87,6 @@ app.post('/submit', (req, res) => {
 // GET /api/participants : liste semaine en cours
 // -------------------------
 app.get('/api/participants', (req, res) => {
-  // On peut trier par id (sécurisé) ou par date_participation (colonne DATE)
   db.query('SELECT * FROM participants_PT ORDER BY id DESC', (err, results) => {
     if (err) {
       console.error("❌ Erreur lors de la récupération des participants :", err.sqlMessage || err);
@@ -95,7 +96,9 @@ app.get('/api/participants', (req, res) => {
   });
 });
 
-// (Optionnel) /diag pour vérifier rapidement que tout va bien
+// -------------------------
+// /diag : test rapide (ne modifie rien)
+// -------------------------
 app.get('/diag', (req, res) => {
   const out = {};
   db.query('SELECT 1 AS ok', (e1) => {

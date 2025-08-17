@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="tirage.css">
 </head>
 <body>
-  <h2>Tirage des gagnants - <span id="edition">Édition Bandrélé</span></h2>
+  <h2>Tirage des gagnants - <span id="edition">Édition Petit-Terre</span></h2>
 
   <div id="wheel-container">
     <div id="arrow-container">
@@ -25,8 +25,8 @@
   <div id="winner"></div>
 
   <script>
-    const API_URL = 'https://favelas-production.up.railway.app/api/participants';
-    const VILLAGE = 'Bandrele'; // mettre null pour tous les villages
+    const API_URL = 'https://favelas-production.up.railway.app/api/participants_PT';
+    const VILLAGE = 'Petit-Terre'; // mettre null pour tous les villages
 
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
