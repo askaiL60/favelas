@@ -63,7 +63,11 @@ app.post('/submit', (req, res) => {
           }
 
           // 3) insérer dans la table de la semaine en cours
-          const sql = "INSERT INTO participants_PT (prenom, pseudo, village, taille) VALUES (?, ?, ?, ?)";
+          //    ⚠️ date_participation est de type DATE -> on utilise CURDATE()
+          const sql = `
+            INSERT INTO participants_PT (prenom, pseudo, village, taille, date_participation)
+            VALUES (?, ?, ?, ?, CURDATE())
+          `;
           db.query(sql, [prenom, pseudo, village, taille], (err3) => {
             if (err3) {
               console.error("❌ INSERT participants_PT:", err3.sqlMessage || err3);
@@ -81,6 +85,7 @@ app.post('/submit', (req, res) => {
 // GET /api/participants : liste semaine en cours
 // -------------------------
 app.get('/api/participants', (req, res) => {
+  // On peut trier par id (sécurisé) ou par date_participation (colonne DATE)
   db.query('SELECT * FROM participants_PT ORDER BY id DESC', (err, results) => {
     if (err) {
       console.error("❌ Erreur lors de la récupération des participants :", err.sqlMessage || err);
@@ -90,9 +95,7 @@ app.get('/api/participants', (req, res) => {
   });
 });
 
-// -------------------------
-// /diag : test rapide (sans action sur BDD)
-// -------------------------
+// (Optionnel) /diag pour vérifier rapidement que tout va bien
 app.get('/diag', (req, res) => {
   const out = {};
   db.query('SELECT 1 AS ok', (e1) => {
@@ -103,22 +106,6 @@ app.get('/diag', (req, res) => {
         out.participants_PT = e3 ? 'ko' : `ok (${r3?.[0]?.c ?? 0})`;
         res.json(out);
       });
-    });
-  });
-});
-
-// -------------------------
-// /schema : (lecture) colonnes utiles
-// -------------------------
-app.get('/schema', (req, res) => {
-  // Petit helper pour vérifier que les colonnes attendues existent
-  db.query('SHOW COLUMNS FROM participants_PT', (err, rows) => {
-    if (err) {
-      console.error("❌ SHOW COLUMNS participants_PT:", err.sqlMessage || err);
-      return res.status(500).json({ error: 'Erreur schéma participants_PT' });
-    }
-    res.json({
-      participants_PT: rows.map(r => ({ Field: r.Field, Type: r.Type, Null: r.Null, Key: r.Key, Default: r.Default }))
     });
   });
 });
