@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Roue de tirage</title>
-  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="tirage.css">
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="tirage.css" />
 </head>
 <body>
   <h2>Tirage des gagnants - <span id="edition">Édition Petit-Terre</span></h2>
@@ -25,8 +26,9 @@
   <div id="winner"></div>
 
   <script>
-    const API_URL = 'https://favelas-production.up.railway.app/api/participants_petit_terre';
-    const VILLAGE = 'Petit-Terre'; // mettre null pour tous les villages
+    const API_URL = 'https://favelas-production.up.railway.app/api/participants';
+    const VILLAGE = null;
+    const MAX_WINNERS = 2;
 
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
@@ -37,7 +39,7 @@
     let isSpinning = false;
     let winners = [];
 
-    function safeText(text) { return (text || '').toString().trim(); }
+    const safeText = (t) => (t || '').toString().trim();
 
     async function fetchParticipants() {
       try {
@@ -45,10 +47,9 @@
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const rows = await res.json();
 
-        // Filtre + dédoublonnage
         const seen = new Set();
         participants = rows
-          .filter(r => !VILLAGE || r.village === VILLAGE)
+          .filter(r => !VILLAGE || (r.village || '').toLowerCase() === VILLAGE.toLowerCase())
           .filter(r => {
             const key = safeText(r.pseudo).toLowerCase();
             if (!key || seen.has(key)) return false;
@@ -58,14 +59,15 @@
           .map(r => ({ pseudo: safeText(r.pseudo), prenom: safeText(r.prenom) }));
 
         drawWheel();
-        document.getElementById('spinBtn').disabled = participants.length < 1;
-
+        document.getElementById('spinBtn').disabled = participants.length < 2;
         if (participants.length < 2) {
-          console.warn('Pas assez de participants pour un tirage.');
+          document.getElementById('winner').innerHTML =
+            `<p>Pas assez de participants pour lancer le tirage.</p>`;
         }
       } catch (e) {
         console.error('Erreur lors du chargement des participants :', e);
-        alert('Impossible de charger la liste des participants.');
+        document.getElementById('winner').innerHTML =
+          `<p>Erreur de chargement des participants.</p>`;
       }
     }
 
@@ -74,8 +76,7 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         return;
       }
-
-      const arc = 2 * Math.PI / participants.length;
+      const arc = (2 * Math.PI) / participants.length;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       participants.forEach((p, i) => {
@@ -85,23 +86,21 @@
 
         if (blinking && isHighlight) {
           const time = Date.now() / 200;
-          const flash = Math.floor(time) % 2 === 0 ? "#FFD700" : "orange";
+          const flash = Math.floor(time) % 2 === 0 ? '#FFD700' : 'orange';
           ctx.fillStyle = flash;
         } else if (isWinner) {
-          ctx.fillStyle = "#FFD700";
+          ctx.fillStyle = '#FFD700';
         } else {
-          ctx.fillStyle = "#ccc";
+          ctx.fillStyle = '#ccc';
         }
 
-        // segment
         ctx.beginPath();
         ctx.moveTo(radius, radius);
         ctx.arc(radius, radius, radius, angle, angle + arc);
         ctx.lineTo(radius, radius);
         ctx.fill();
 
-        // séparateur
-        ctx.strokeStyle = "#666";
+        ctx.strokeStyle = '#666';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(radius, radius);
@@ -111,30 +110,31 @@
         );
         ctx.stroke();
 
-        // texte pseudo
         ctx.save();
         ctx.translate(radius, radius);
         ctx.rotate(angle + arc / 2);
-        ctx.textAlign = "right";
-        ctx.fillStyle = "#000";
-        ctx.font = "14px Arial";
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#000';
+        ctx.font = '14px Arial';
         ctx.fillText(p.pseudo, radius - 10, 5);
         ctx.restore();
       });
     }
 
     function spin() {
-      if (isSpinning || participants.length < 1) return;
+      const btn = document.getElementById('spinBtn');
+      if (winners.length >= MAX_WINNERS) { btn.disabled = true; return; }
+      if (isSpinning || participants.length < 2) return;
 
       isSpinning = true;
-      let winnerIndex;
 
+      let winnerIndex;
       do {
         winnerIndex = Math.floor(Math.random() * participants.length);
       } while (winners.find(w => w.pseudo === participants[winnerIndex].pseudo));
 
-      const arc = 2 * Math.PI / participants.length;
-      const stopAngle = 3 * Math.PI / 2 - (winnerIndex * arc + arc / 2);
+      const arc = (2 * Math.PI) / participants.length;
+      const stopAngle = (3 * Math.PI) / 2 - (winnerIndex * arc + arc / 2);
 
       let rotation = 0;
       const duration = 2000;
@@ -150,12 +150,14 @@
         step++;
         if (step >= steps) {
           clearInterval(spinInterval);
+
           const winner = participants[winnerIndex];
           winners.push(winner);
-          document.getElementById('winner').innerHTML +=
-            `Gagnant ${winners.length} : <b>${winner.pseudo}</b> (${winner.prenom})<br>`;
+          document.getElementById('winner').insertAdjacentHTML(
+            'beforeend',
+            `Gagnant ${winners.length} : <b>${winner.pseudo}</b> (${winner.prenom})<br>`
+          );
 
-          // clignotement
           let blinkCount = 0;
           const blinkInterval = setInterval(() => {
             drawWheel(winnerIndex, true);
@@ -167,12 +169,12 @@
           }, 300);
 
           isSpinning = false;
+          if (winners.length >= MAX_WINNERS) btn.disabled = true;
         }
       }, interval);
     }
 
     document.getElementById('spinBtn').addEventListener('click', spin);
-
     fetchParticipants();
   </script>
 </body>
