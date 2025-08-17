@@ -20,9 +20,9 @@ const db = mysql.createConnection({
 
 db.connect(err => {
   if (err) {
-    console.error("❌ Erreur de connexion MySQL :", err);
+    console.error(" Erreur de connexion MySQL :", err);
   } else {
-    console.log("✅ Connecté à la base MySQL Railway");
+    console.log(" Connecté à la base MySQL Railway");
   }
 });
 
@@ -48,7 +48,7 @@ app.post('/submit', (req, res) => {
     [pseudo],
     (err, r1) => {
       if (err) {
-        console.error("❌ DB (check ancienne table):", err.sqlMessage || err);
+        console.error(" DB (check ancienne table):", err.sqlMessage || err);
         return res.status(500).json({ message: "Erreur DB (check ancienne table)" });
       }
       if (r1.length > 0) {
@@ -61,7 +61,7 @@ app.post('/submit', (req, res) => {
         [pseudo],
         (err2, r2) => {
           if (err2) {
-            console.error("❌ DB (check table actuelle):", err2.sqlMessage || err2);
+            console.error(" DB (check table actuelle):", err2.sqlMessage || err2);
             return res.status(500).json({ message: "Erreur DB (check table actuelle)" });
           }
           if (r2.length > 0) {
@@ -75,10 +75,10 @@ app.post('/submit', (req, res) => {
           `;
           db.query(sql, [prenom, pseudo, village, taille], (err3) => {
             if (err3) {
-              console.error("❌ INSERT participants_petit_terre:", err3.sqlMessage || err3);
+              console.error(" INSERT participants_petit_terre:", err3.sqlMessage || err3);
               return res.status(500).json({ message: "Erreur lors de l'enregistrement" });
             }
-            res.status(200).json({ message: "✅ Participation enregistrée !" });
+            res.status(200).json({ message: " Participation enregistrée !" });
           });
         }
       );
@@ -92,7 +92,7 @@ app.post('/submit', (req, res) => {
 app.get('/api/participants', (req, res) => {
   db.query('SELECT * FROM participants_petit_terre ORDER BY id DESC', (err, results) => {
     if (err) {
-      console.error("❌ Erreur lors de la récupération des participants :", err.sqlMessage || err);
+      console.error(" Erreur lors de la récupération des participants :", err.sqlMessage || err);
       return res.status(500).json({ error: 'Erreur serveur' });
     }
     res.json(results);
@@ -121,5 +121,5 @@ app.get('/diag', (req, res) => {
 // -------------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Serveur lancé sur le port ${PORT}`);
+  console.log(` Serveur lancé sur le port ${PORT}`);
 });
