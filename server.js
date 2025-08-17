@@ -1,4 +1,4 @@
-const express = require('express'); 
+const express = require('express');
 const mysql = require('mysql2');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -32,7 +32,7 @@ db.connect(err => {
 app.post('/submit', (req, res) => {
   let { prenom, pseudo, village, taille } = req.body;
 
-  // small sanitation
+  // nettoyage
   prenom = (prenom || '').trim();
   pseudo = (pseudo || '').trim();
   village = (village || '').trim();
@@ -57,7 +57,7 @@ app.post('/submit', (req, res) => {
 
       // 2) déjà inscrit dans l'édition en cours ? (insensible à la casse)
       db.query(
-        'SELECT id FROM participants_PT WHERE LOWER(pseudo) = LOWER(?) LIMIT 1',
+        'SELECT id FROM participants_petit_terre WHERE LOWER(pseudo) = LOWER(?) LIMIT 1',
         [pseudo],
         (err2, r2) => {
           if (err2) {
@@ -68,14 +68,17 @@ app.post('/submit', (req, res) => {
             return res.status(409).json({ message: "Tu as déjà participé cette semaine !" });
           }
 
-          // 3) insérer dans la table de la semaine en cours (SANS date_participation)
-          const sql = "INSERT INTO participants_PT (prenom, pseudo, village, taille) VALUES (?, ?, ?, ?)";
+          // 3) insérer dans la table de la semaine en cours
+          const sql = `
+            INSERT INTO participants_petit_terre (prenom, pseudo, village, taille, date_participation)
+            VALUES (?, ?, ?, ?, CURDATE())
+          `;
           db.query(sql, [prenom, pseudo, village, taille], (err3) => {
             if (err3) {
-              console.error("❌ INSERT participants_PT:", err3.sqlMessage || err3);
+              console.error("❌ INSERT participants_petit_terre:", err3.sqlMessage || err3);
               return res.status(500).json({ message: "Erreur lors de l'enregistrement" });
             }
-            res.status(200).json({ message: "Participation enregistrée !" });
+            res.status(200).json({ message: "✅ Participation enregistrée !" });
           });
         }
       );
@@ -87,7 +90,7 @@ app.post('/submit', (req, res) => {
 // GET /api/participants : liste semaine en cours
 // -------------------------
 app.get('/api/participants', (req, res) => {
-  db.query('SELECT * FROM participants_PT ORDER BY id DESC', (err, results) => {
+  db.query('SELECT * FROM participants_petit_terre ORDER BY id DESC', (err, results) => {
     if (err) {
       console.error("❌ Erreur lors de la récupération des participants :", err.sqlMessage || err);
       return res.status(500).json({ error: 'Erreur serveur' });
@@ -105,8 +108,8 @@ app.get('/diag', (req, res) => {
     out.db = e1 ? 'ko' : 'ok';
     db.query('SELECT COUNT(*) AS c FROM participants', (e2, r2) => {
       out.participants = e2 ? 'ko' : `ok (${r2?.[0]?.c ?? 0})`;
-      db.query('SELECT COUNT(*) AS c FROM participants_PT', (e3, r3) => {
-        out.participants_PT = e3 ? 'ko' : `ok (${r3?.[0]?.c ?? 0})`;
+      db.query('SELECT COUNT(*) AS c FROM participants_petit_terre', (e3, r3) => {
+        out.participants_petit_terre = e3 ? 'ko' : `ok (${r3?.[0]?.c ?? 0})`;
         res.json(out);
       });
     });
