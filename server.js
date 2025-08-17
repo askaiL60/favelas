@@ -9,16 +9,15 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// Connexion MySQL avec variables Railway
+// Connexion MySQL (Railway)
 const db = mysql.createConnection({
   host: process.env.MYSQLHOST,
   user: process.env.MYSQLUSER,
   password: process.env.MYSQLPASSWORD,
   database: process.env.MYSQLDATABASE,
-  port: process.env.MYSQLPORT // Port MySQL fourni par Railway (ex: 35188)
+  port: process.env.MYSQLPORT
 });
 
-// Vérifier la connexion MySQL
 db.connect(err => {
   if (err) {
     console.error("❌ Erreur de connexion MySQL :", err);
@@ -37,33 +36,31 @@ app.post('/submit', (req, res) => {
     return res.status(400).json({ message: "Champs manquants" });
   }
 
-  // 1) Vérifie si déjà inscrit dans l'ancienne édition (table participants)
+  // 1) déjà inscrit dans l'ancienne édition ?
   db.query('SELECT id FROM participants WHERE pseudo = ? LIMIT 1', [pseudo], (err, r1) => {
     if (err) {
-      console.error("❌ Erreur DB (check ancienne table):", err);
+      console.error("❌ DB (check ancienne table):", err);
       return res.status(500).json({ message: "Erreur DB (check ancienne table)" });
     }
-
     if (r1.length > 0) {
       return res.status(409).json({ message: "Tu as déjà participé à une édition précédente !" });
     }
 
-    // 2) Vérifie si déjà inscrit dans l'édition en cours (table participants_PT)
+    // 2) déjà inscrit dans l'édition en cours ?
     db.query('SELECT id FROM participants_PT WHERE pseudo = ? LIMIT 1', [pseudo], (err2, r2) => {
       if (err2) {
-        console.error("❌ Erreur DB (check table actuelle):", err2);
+        console.error("❌ DB (check table actuelle):", err2);
         return res.status(500).json({ message: "Erreur DB (check table actuelle)" });
       }
-
       if (r2.length > 0) {
         return res.status(409).json({ message: "Tu as déjà participé cette semaine !" });
       }
 
-      // 3) Sinon on insère dans participants_PT
+      // 3) insérer dans la table de la semaine en cours
       const sql = "INSERT INTO participants_PT (prenom, pseudo, village, taille) VALUES (?, ?, ?, ?)";
       db.query(sql, [prenom, pseudo, village, taille], (err3) => {
         if (err3) {
-          console.error("❌ Erreur INSERT participants_PT:", err3);
+          console.error("❌ INSERT participants_PT:", err3);
           return res.status(500).json({ message: "Erreur lors de l'enregistrement" });
         }
         res.status(200).json({ message: "Participation enregistrée !" });
@@ -73,7 +70,7 @@ app.post('/submit', (req, res) => {
 });
 
 // -------------------------
-// GET /api/participants : liste des inscrits de la semaine
+// GET /api/participants : liste semaine en cours
 // -------------------------
 app.get('/api/participants', (req, res) => {
   db.query('SELECT * FROM participants_PT ORDER BY id DESC', (err, results) => {
@@ -86,9 +83,26 @@ app.get('/api/participants', (req, res) => {
 });
 
 // -------------------------
-// Démarrage du serveur Web
+// (Optionnel) /diag : aide au debug sans SQL manuel
 // -------------------------
-const PORT = process.env.PORT || 3000; // Port Railway
+app.get('/diag', (req, res) => {
+  const out = {};
+  db.query('SELECT 1 AS ok', (e1) => {
+    out.db = e1 ? 'ko' : 'ok';
+    db.query('SELECT COUNT(*) AS c FROM participants', (e2, r2) => {
+      out.participants = e2 ? 'ko' : `ok (${r2?.[0]?.c ?? 0})`;
+      db.query('SELECT COUNT(*) AS c FROM participants_PT', (e3, r3) => {
+        out.participants_PT = e3 ? 'ko' : `ok (${r3?.[0]?.c ?? 0})`;
+        res.json(out);
+      });
+    });
+  });
+});
+
+// -------------------------
+// Démarrage serveur
+// -------------------------
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Serveur lancé sur le port ${PORT}`);
 });
