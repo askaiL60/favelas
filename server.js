@@ -36,37 +36,45 @@ app.post('/submit', (req, res) => {
     return res.status(400).json({ message: "Champs manquants" });
   }
 
-  // 1) déjà inscrit dans l'ancienne édition ?
-  db.query('SELECT id FROM participants WHERE pseudo = ? LIMIT 1', [pseudo], (err, r1) => {
-    if (err) {
-      console.error("❌ DB (check ancienne table):", err);
-      return res.status(500).json({ message: "Erreur DB (check ancienne table)" });
-    }
-    if (r1.length > 0) {
-      return res.status(409).json({ message: "Tu as déjà participé à une édition précédente !" });
-    }
-
-    // 2) déjà inscrit dans l'édition en cours ?
-    db.query('SELECT id FROM participants_PT WHERE pseudo = ? LIMIT 1', [pseudo], (err2, r2) => {
-      if (err2) {
-        console.error("❌ DB (check table actuelle):", err2);
-        return res.status(500).json({ message: "Erreur DB (check table actuelle)" });
+  // 1) déjà inscrit dans l'ancienne édition ? (insensible à la casse)
+  db.query(
+    'SELECT id FROM participants WHERE LOWER(pseudo) = LOWER(?) LIMIT 1',
+    [pseudo],
+    (err, r1) => {
+      if (err) {
+        console.error("❌ DB (check ancienne table):", err.sqlMessage || err);
+        return res.status(500).json({ message: "Erreur DB (check ancienne table)" });
       }
-      if (r2.length > 0) {
-        return res.status(409).json({ message: "Tu as déjà participé cette semaine !" });
+      if (r1.length > 0) {
+        return res.status(409).json({ message: "Tu as déjà participé à une édition précédente !" });
       }
 
-      // 3) insérer dans la table de la semaine en cours
-      const sql = "INSERT INTO participants_PT (prenom, pseudo, village, taille) VALUES (?, ?, ?, ?)";
-      db.query(sql, [prenom, pseudo, village, taille], (err3) => {
-        if (err3) {
-          console.error("❌ INSERT participants_PT:", err3);
-          return res.status(500).json({ message: "Erreur lors de l'enregistrement" });
+      // 2) déjà inscrit dans l'édition en cours ? (insensible à la casse)
+      db.query(
+        'SELECT id FROM participants_PT WHERE LOWER(pseudo) = LOWER(?) LIMIT 1',
+        [pseudo],
+        (err2, r2) => {
+          if (err2) {
+            console.error("❌ DB (check table actuelle):", err2.sqlMessage || err2);
+            return res.status(500).json({ message: "Erreur DB (check table actuelle)" });
+          }
+          if (r2.length > 0) {
+            return res.status(409).json({ message: "Tu as déjà participé cette semaine !" });
+          }
+
+          // 3) insérer dans la table de la semaine en cours
+          const sql = "INSERT INTO participants_PT (prenom, pseudo, village, taille) VALUES (?, ?, ?, ?)";
+          db.query(sql, [prenom, pseudo, village, taille], (err3) => {
+            if (err3) {
+              console.error("❌ INSERT participants_PT:", err3.sqlMessage || err3);
+              return res.status(500).json({ message: "Erreur lors de l'enregistrement" });
+            }
+            res.status(200).json({ message: "Participation enregistrée !" });
+          });
         }
-        res.status(200).json({ message: "Participation enregistrée !" });
-      });
-    });
-  });
+      );
+    }
+  );
 });
 
 // -------------------------
@@ -75,7 +83,7 @@ app.post('/submit', (req, res) => {
 app.get('/api/participants', (req, res) => {
   db.query('SELECT * FROM participants_PT ORDER BY id DESC', (err, results) => {
     if (err) {
-      console.error("❌ Erreur lors de la récupération des participants :", err);
+      console.error("❌ Erreur lors de la récupération des participants :", err.sqlMessage || err);
       return res.status(500).json({ error: 'Erreur serveur' });
     }
     res.json(results);
@@ -83,7 +91,7 @@ app.get('/api/participants', (req, res) => {
 });
 
 // -------------------------
-// (Optionnel) /diag : aide au debug sans SQL manuel
+// /diag : test rapide (sans action sur BDD)
 // -------------------------
 app.get('/diag', (req, res) => {
   const out = {};
@@ -95,6 +103,22 @@ app.get('/diag', (req, res) => {
         out.participants_PT = e3 ? 'ko' : `ok (${r3?.[0]?.c ?? 0})`;
         res.json(out);
       });
+    });
+  });
+});
+
+// -------------------------
+// /schema : (lecture) colonnes utiles
+// -------------------------
+app.get('/schema', (req, res) => {
+  // Petit helper pour vérifier que les colonnes attendues existent
+  db.query('SHOW COLUMNS FROM participants_PT', (err, rows) => {
+    if (err) {
+      console.error("❌ SHOW COLUMNS participants_PT:", err.sqlMessage || err);
+      return res.status(500).json({ error: 'Erreur schéma participants_PT' });
+    }
+    res.json({
+      participants_PT: rows.map(r => ({ Field: r.Field, Type: r.Type, Null: r.Null, Key: r.Key, Default: r.Default }))
     });
   });
 });
