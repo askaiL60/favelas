@@ -7,6 +7,39 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Calques décor (étoiles + vagues) -->
+<div class="sky-layer sky-gradient">
+  <div class="stars"></div>
+  <div class="twinkles"></div>
+  <div class="shooting-star"></div>
+  <div class="shooting-star"></div>
+  <div class="shooting-star"></div>
+</div>
+
+<div class="waves-top">
+  <svg viewBox="0 0 1440 140" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="gradTop" class="waves-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%"/><stop offset="100%"/>
+      </linearGradient>
+    </defs>
+    <path class="wave-path" fill="url(#gradTop)" fill-opacity=".25"
+      d="M0,40 C120,65 240,90 360,80 C480,70 600,25 720,35 C840,45 960,105 1080,105 C1200,105 1320,70 1440,50 L1440,0 L0,0 Z"/>
+  </svg>
+</div>
+
+<div class="waves-bottom">
+  <svg viewBox="0 0 1440 160" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="gradBottom" class="waves-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%"/><stop offset="100%"/>
+      </linearGradient>
+    </defs>
+    <path class="wave-path" fill="url(#gradBottom)" fill-opacity=".35"
+      d="M0,120 C180,140 300,110 420,120 C540,130 660,160 780,150 C900,140 1020,100 1140,105 C1260,110 1350,135 1440,120 L1440,160 L0,160 Z"/>
+  </svg>
+</div>
+
   <h2>Formulaire de participation - <span id="edition">Édition Mamoudzou</span></h2>
 
   <form id="formulaire">
@@ -42,7 +75,7 @@
 
   <script src="script.js"></script>
   <div class="filigrane">
-  <img src="images/favelas.png" alt="Logo Favelas">
+  <img src="images/logofvls.png" alt="Logo Favelas">
 </div>
 
 </body>
