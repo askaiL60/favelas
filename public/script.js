@@ -1,4 +1,11 @@
-const villagePT = [ "Dzaoudzi", "Labattoir", "Pamandzi"
+const villagePT = [   "Passamainty",
+  "Tsoundzou 1",
+  "Tsoundzou 2",
+  "Vahibé",
+  "M’Tsapéré",
+  "Cavani",
+  "Mamoudzou",
+  "Kaweni"
 ];
 
 window.addEventListener("DOMContentLoaded", () => {

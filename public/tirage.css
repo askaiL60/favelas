@@ -1,14 +1,46 @@
 body {
   font-family: Arial, sans-serif;
-  background-color: #f5f5f5;
+  /* on laisse le texte centré et le padding existants */
   text-align: center;
   margin: 0;
   padding: 20px;
+
+  /* nécessaire pour les pseudo‑éléments plein écran */
+  position: relative;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-h2 {
-  margin-bottom: 20px;
+/* Dégradé animé plein écran derrière tout le contenu  */
+body::before {
+  content: "";
+  position: fixed;           /* reste en place même si on scrolle */
+  inset: 0;
+  z-index: -1;               /* derrière la page */
+  background: linear-gradient(120deg,
+    #0f2027, #203a43, #2c5364, #3b2667, #bc4e9c);
+  background-size: 300% 300%;
+  animation: gradientShift 20s ease infinite;
 }
+
+/* (optionnel) petit vignettage pour donner de la profondeur */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(80% 60% at 50% 40%, rgba(0,0,0,0) 60%, rgba(0,0,0,0.25) 100%);
+}
+
+/* Animation du dégradé */
+@keyframes gradientShift {
+  0%   { background-position:   0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position:   0% 50%; }
+}
+
 
 #wheel-container {
   position: relative;
@@ -49,12 +81,14 @@ h2 {
 }
 
 
-canvas {
+/* APRÈS : vise uniquement la roue */
+#wheel {
   border: 5px solid #333;
   border-radius: 50%;
   background-color: #fff;
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
+
 
 button {
   margin-top: 30px;
@@ -72,17 +106,19 @@ button:hover {
   background-color: #0056b3;
 }
 
-h3 {
-  margin-top: 50px;
-  font-size: 22px;
+h2, h3 { color: #ffffff; }
+
+/* La carte "Liste des gagnants" reste claire pour contraster */
+#winner {
+  color: #111;
+  background: rgba(255,255,255,0.9);
+  padding: 10px;
+  border-radius: 6px;
+  margin: 15px auto 5px;
+  max-width: 520px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
 }
 
-#winner {
-  margin-bottom: 5px;
-  background: #f3f3f3;
-  padding: 10px;
-  border-radius: 5px;
-}
 
 
 /* logo Favelas centré au milieu de la roue */
@@ -101,4 +137,37 @@ h3 {
   background-position: center;
   border: 3px solid #333;
   z-index: 5;
+}
+
+#bg-particles{
+  position: fixed;
+  inset: 0;
+  z-index: -2;          /* derrière tout */
+  pointer-events: none; /* ne bloque pas les clics */
+}
+
+/* Halo/vague animée derrière la roue */
+#wheel-container::before{
+  content:"";
+  position:absolute;
+  inset:-60px;                /* dépasse un peu la roue */
+  border-radius:50%;
+  z-index:-1;
+  background:
+    radial-gradient(45% 45% at 50% 50%, rgba(255,255,255,0.15), rgba(255,255,255,0) 60%),
+    radial-gradient(60% 60% at 60% 40%, rgba(0,0,0,0.22), rgba(0,0,0,0) 60%);
+  filter: blur(18px);
+  animation: waveFloat 8s ease-in-out infinite;
+}
+
+@keyframes waveFloat {
+  0%,100% { transform: scale(1) translateY(0); opacity: 0.9; }
+  50%     { transform: scale(1.04) translateY(6px); opacity: 1; }
+}
+
+#confetti{
+  position: fixed;
+  inset: 0;
+  z-index: 10;          /* au‑dessus du contenu, mais */
+  pointer-events: none; /* ne bloque pas les clics    */
 }

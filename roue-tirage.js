@@ -122,3 +122,55 @@ function setupUI() {
 
 // --- Go ---
 initWheel().then(setupUI);
+
+// --- Particules douces en arrière-plan ---
+(() => {
+  const c = document.getElementById('bg-particles');
+  if (!c) return; // sécurité si le canvas n'est pas présent
+  const ctx = c.getContext('2d');
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  let W, H, particles;
+
+  function resize() {
+    W = c.width  = innerWidth  * DPR;
+    H = c.height = innerHeight * DPR;
+    c.style.width  = innerWidth + 'px';
+    c.style.height = innerHeight + 'px';
+    const count = Math.max(80, Math.min(220, Math.floor((innerWidth*innerHeight)*0.00015)));
+particles = Array.from({length: count}, () => ({
+  x: Math.random()*W,
+  y: Math.random()*H,
+  r: (Math.random()*1.8 + 0.8) * DPR, // étoiles un peu plus grandes
+  a: Math.random()*Math.PI*2,
+  s: Math.random()*0.25 + 0.1        // mouvement très lent
+}));
+
+  }
+  addEventListener('resize', resize); resize();
+
+  function tick() {
+  ctx.clearRect(0,0,W,H);
+  for (const p of particles) {
+    // léger déplacement
+    p.a += (Math.random()-0.5)*0.02;
+    p.x += Math.cos(p.a)*p.s;
+    p.y += Math.sin(p.a)*p.s;
+
+    // rebouclage si sortie
+    if (p.x<0) p.x+=W; if (p.x>W) p.x-=W;
+    if (p.y<0) p.y+=H; if (p.y>H) p.y-=H;
+
+    // --- Scintillement ---
+    const twinkle = 0.6 + 0.4 * Math.sin(Date.now()/300 + p.x*0.01 + p.y*0.01);
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,255,255,${0.3 + 0.7*twinkle})`;
+    ctx.fill();
+  }
+  requestAnimationFrame(tick);
+}
+
+  tick();
+})();
+
