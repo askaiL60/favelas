@@ -63,7 +63,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // Option placeholder
   const placeholder = document.createElement("option");
   placeholder.value = "";
-  placeholder.textContent = "— Choisir un village —";
+  placeholder.textContent = "Sélectionnez votre village";
   placeholder.disabled = true;
   placeholder.selected = true;
   villageSelect.appendChild(placeholder);
