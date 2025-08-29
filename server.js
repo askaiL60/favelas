@@ -76,7 +76,7 @@ app.get('/api/villages', (_req, res) => {
 });
 
 // ----------------------------------------------------
-// POST /submit : inscription (ne bloque QUE les gagnants)
+// POST /submit : bloque gagnants + 1 participation max cette semaine
 // ----------------------------------------------------
 app.post('/submit', (req, res) => {
   let { prenom, pseudo, village, taille } = req.body;
@@ -92,40 +92,52 @@ app.post('/submit', (req, res) => {
     return res.status(400).json({ message: "Champs manquants" });
   }
 
-  // (Optionnel) vérifier que le village est dans la liste officielle
-  const isVillageOk = VILLAGES_MAYOTTE
-    .some(v => v.localeCompare(village, 'fr', { sensitivity: 'base', ignorePunctuation: true }) === 0);
+  // (Optionnel) valider le village contre la liste officielle si tu l'utilises
+  const isVillageOk = typeof VILLAGES_MAYOTTE !== 'undefined'
+    ? VILLAGES_MAYOTTE.some(v => v.localeCompare(village, 'fr', { sensitivity: 'base', ignorePunctuation: true }) === 0)
+    : true;
   if (!isVillageOk) {
     return res.status(400).json({ message: "Village invalide" });
   }
 
-  // 👉 Bloquer UNIQUEMENT si le pseudo est un gagnant
+  // 1) Bloquer si déjà gagnant
   const CHECK_WINNER = `SELECT 1 FROM gagnants WHERE LOWER(pseudo) = ? LIMIT 1`;
-
-  db.query(CHECK_WINNER, [pseudoNorm], (err, rows) => {
-    if (err) {
-      console.error("❌ DB (check gagnant):", err.sqlMessage || err);
+  db.query(CHECK_WINNER, [pseudoNorm], (err1, rows1) => {
+    if (err1) {
+      console.error("❌ DB (check gagnant):", err1.sqlMessage || err1);
       return res.status(500).json({ message: "Erreur DB (check gagnant)" });
     }
-
-    if (rows.length > 0) {
+    if (rows1.length > 0) {
       return res.status(409).json({ message: "Tu es déjà gagnant(e) : tu ne peux plus participer au concours." });
     }
 
-    // ✅ OK -> Insérer dans la table de la semaine en cours
-    const INSERT_SQL = `
-      INSERT INTO participants_PT (prenom, pseudo, village, taille, date_participation)
-      VALUES (?, ?, ?, ?, CURDATE())
-    `;
-    db.query(INSERT_SQL, [prenom, pseudo, village, taille], (err2) => {
+    // 2) Bloquer si déjà inscrit cette semaine (table participants_PT)
+    const CHECK_THIS_WEEK = `SELECT 1 FROM participants_PT WHERE LOWER(pseudo) = ? LIMIT 1`;
+    db.query(CHECK_THIS_WEEK, [pseudoNorm], (err2, rows2) => {
       if (err2) {
-        console.error("❌ INSERT participants_PT:", err2.sqlMessage || err2);
-        return res.status(500).json({ message: "Erreur lors de l'enregistrement" });
+        console.error("❌ DB (check semaine):", err2.sqlMessage || err2);
+        return res.status(500).json({ message: "Erreur DB (check semaine)" });
       }
-      return res.status(200).json({ message: "Participation enregistrée !" });
+      if (rows2.length > 0) {
+        return res.status(409).json({ message: "Tu as déjà participé cette semaine !" });
+      }
+
+      // 3) OK -> Insérer la participation de la semaine en cours
+      const INSERT_SQL = `
+        INSERT INTO participants_PT (prenom, pseudo, village, taille, date_participation)
+        VALUES (?, ?, ?, ?, CURDATE())
+      `;
+      db.query(INSERT_SQL, [prenom, pseudo, village, taille], (err3) => {
+        if (err3) {
+          console.error("❌ INSERT participants_PT:", err3.sqlMessage || err3);
+          return res.status(500).json({ message: "Erreur lors de l'enregistrement" });
+        }
+        return res.status(200).json({ message: "Participation enregistrée !" });
+      });
     });
   });
 });
+
 
 // -----------------------------------------------------
 // GET /api/participants : liste des inscrits (semaine en cours)
