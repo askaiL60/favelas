@@ -30,12 +30,58 @@ db.connect(err => {
 });
 
 // ----------------------------------------------------
-// POST /submit : inscription (anti-doublon multi-tables)
+// (Optionnel) Liste officielle des villages via l'API
+// ----------------------------------------------------
+const VILLAGES_MAYOTTE = [
+  // Acoua
+  "Acoua","Mtsangadoua",
+  // Bandraboua
+  "Bandraboua","Handrema","Mtsangamboua",
+  // Bandrélé
+  "Bandrélé","Hamouro","Dapani","Mtsamoudou",
+  // Bouéni
+  "Bouéni","Bambo-Ouest","Mbouanatsa","Majiméouni","Mzouazia","Hagnoundrou",
+  // Chiconi
+  "Chiconi","Miréréni",
+  // Chirongui
+  "Chirongui","Mramadoudou","Poroani","Tsimkoura","Bambo-Est",
+  // Dembéni
+  "Dembéni","Iloni","Tsararano",
+  // Dzaoudzi-Labattoir (Petite-Terre)
+  "Dzaoudzi","Labattoir",
+  // Kani-Kéli
+  "Kani-Kéli","Passy-Kéli",
+  // Koungou
+  "Koungou","Majicavo Lamir","Majicavo Koropa","Longoni","Trévani",
+  // Mamoudzou
+  "Mamoudzou","Cavani","Vahibé","Passamainty","M’Tsapéré","Kawéni",
+  // Mtsamboro
+  "Mtsamboro","Hamjago","Mtsahara",
+  // M’Tsangamouji
+  "M’Tsangamouji","Mliha",
+  // Ouangani
+  "Ouangani","Coconi","Kahani",
+  // Pamandzi (Petite-Terre)
+  "Pamandzi",
+  // Sada
+  "Sada","Mangajou",
+  // Tsingoni
+  "Tsingoni","Combani","Mroalé"
+];
+
+app.get('/api/villages', (_req, res) => {
+  const uniques = Array.from(new Set(VILLAGES_MAYOTTE));
+  uniques.sort((a,b)=>a.localeCompare(b,'fr',{sensitivity:'base',ignorePunctuation:true}));
+  res.json(uniques);
+});
+
+// ----------------------------------------------------
+// POST /submit : inscription (ne bloque QUE les gagnants)
 // ----------------------------------------------------
 app.post('/submit', (req, res) => {
   let { prenom, pseudo, village, taille } = req.body;
 
-  // Nettoyage + normalisation pour le check (insensible à la casse et aux espaces)
+  // Nettoyage + normalisation
   prenom  = (prenom  || '').trim();
   pseudo  = (pseudo  || '').trim();
   village = (village || '').trim();
@@ -46,29 +92,27 @@ app.post('/submit', (req, res) => {
     return res.status(400).json({ message: "Champs manquants" });
   }
 
-  // Vérifier si déjà inscrit dans l'une des tables : participants (général),
-  // participants_petit_terre (semaine précédente) ou participants_PT (semaine actuelle)
-  const CHECK_DUP = `
-    SELECT 'participants' AS src FROM participants WHERE LOWER(pseudo) = ?
-    UNION
-    SELECT 'participants_petit_terre' FROM participants_petit_terre WHERE LOWER(pseudo) = ?
-    UNION
-    SELECT 'participants_PT' FROM participants_PT WHERE LOWER(pseudo) = ?
-    LIMIT 1
-  `;
+  // (Optionnel) vérifier que le village est dans la liste officielle
+  const isVillageOk = VILLAGES_MAYOTTE
+    .some(v => v.localeCompare(village, 'fr', { sensitivity: 'base', ignorePunctuation: true }) === 0);
+  if (!isVillageOk) {
+    return res.status(400).json({ message: "Village invalide" });
+  }
 
-  db.query(CHECK_DUP, [pseudoNorm, pseudoNorm, pseudoNorm], (err, rows) => {
+  // 👉 Bloquer UNIQUEMENT si le pseudo est un gagnant
+  const CHECK_WINNER = `SELECT 1 FROM gagnants WHERE LOWER(pseudo) = ? LIMIT 1`;
+
+  db.query(CHECK_WINNER, [pseudoNorm], (err, rows) => {
     if (err) {
-      console.error("❌ DB (check doublon):", err.sqlMessage || err);
-      return res.status(500).json({ message: "Erreur DB (check doublon)" });
+      console.error("❌ DB (check gagnant):", err.sqlMessage || err);
+      return res.status(500).json({ message: "Erreur DB (check gagnant)" });
     }
 
     if (rows.length > 0) {
-      // On bloque toute ré-inscription sur le concours (peu importe la semaine)
-      return res.status(409).json({ message: "Tu as déjà participé au concours !" });
+      return res.status(409).json({ message: "Tu es déjà gagnant(e) : tu ne peux plus participer au concours." });
     }
 
-    // OK -> Insérer dans la table de la semaine en cours
+    // ✅ OK -> Insérer dans la table de la semaine en cours
     const INSERT_SQL = `
       INSERT INTO participants_PT (prenom, pseudo, village, taille, date_participation)
       VALUES (?, ?, ?, ?, CURDATE())
@@ -84,9 +128,9 @@ app.post('/submit', (req, res) => {
 });
 
 // -----------------------------------------------------
-// GET /api/participants : liste des inscrits semaine en cours
+// GET /api/participants : liste des inscrits (semaine en cours)
 // -----------------------------------------------------
-app.get('/api/participants', (req, res) => {
+app.get('/api/participants', (_req, res) => {
   db.query('SELECT * FROM participants_PT ORDER BY id DESC', (err, results) => {
     if (err) {
       console.error("❌ Erreur lors de la récupération des participants :", err.sqlMessage || err);
@@ -99,7 +143,7 @@ app.get('/api/participants', (req, res) => {
 // -----------------------------------------------------
 // /diag : vérifs rapides (ne modifie rien)
 // -----------------------------------------------------
-app.get('/diag', (req, res) => {
+app.get('/diag', (_req, res) => {
   const out = {};
   db.query('SELECT 1 AS ok', (e1) => {
     out.db = e1 ? 'ko' : 'ok';
@@ -112,7 +156,11 @@ app.get('/diag', (req, res) => {
 
         db.query('SELECT COUNT(*) AS c FROM participants_PT', (e4, r4) => {
           out.participants_PT = e4 ? 'ko' : `ok (${r4?.[0]?.c ?? 0})`;
-          res.json(out);
+
+          db.query('SELECT COUNT(*) AS c FROM gagnants', (e5, r5) => {
+            out.gagnants = e5 ? 'ko' : `ok (${r5?.[0]?.c ?? 0})`;
+            res.json(out);
+          });
         });
       });
     });

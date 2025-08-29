@@ -1,17 +1,75 @@
-const villagePT = [   "Passamainty",
-  "Tsoundzou 1",
-  "Tsoundzou 2",
-  "Vahibé",
-  "M’Tsapéré",
-  "Cavani",
-  "Mamoudzou",
-  "Kaweni"
+// --- Liste complète des villages/localités de Mayotte ---
+const VILLAGES = [
+  // Acoua
+  "Acoua", "Mtsangadoua",
+
+  // Bandraboua
+  "Bandraboua", "Handrema", "Mtsangamboua",
+
+  // Bandrélé
+  "Bandrélé", "Hamouro", "Dapani", "Mtsamoudou",
+
+  // Bouéni
+  "Bouéni", "Bambo-Ouest", "Mbouanatsa", "Majiméouni", "Mzouazia", "Hagnoundrou",
+
+  // Chiconi
+  "Chiconi", "Miréréni",
+
+  // Chirongui
+  "Chirongui", "Mramadoudou", "Poroani", "Tsimkoura", "Bambo-Est",
+
+  // Dembéni
+  "Dembéni", "Iloni", "Tsararano",
+
+  // Dzaoudzi-Labattoir (Petite-Terre)
+  "Dzaoudzi", "Labattoir",
+
+  // Kani-Kéli
+  "Kani-Kéli", "Passy-Kéli",
+
+  // Koungou
+  "Koungou", "Majicavo Lamir", "Majicavo Koropa", "Longoni", "Trévani",
+
+  // Mamoudzou
+  "Mamoudzou", "Cavani", "Vahibé", "Passamainty", "M’Tsapéré", "Kawéni", "Tsoundzou 1", "Tsoundzou 2",
+
+  // Mtsamboro
+  "Mtsamboro", "Hamjago", "Mtsahara",
+
+  // M’Tsangamouji
+  "M’Tsangamouji", "Mliha",
+
+  // Ouangani
+  "Ouangani", "Coconi", "Kahani",
+
+  // Pamandzi (Petite-Terre)
+  "Pamandzi",
+
+  // Sada
+  "Sada", "Mangajou",
+
+  // Tsingoni
+  "Tsingoni", "Combani", "Mroalé"
 ];
 
 window.addEventListener("DOMContentLoaded", () => {
   const villageSelect = document.getElementById("village");
+  if (!villageSelect) return;
 
-  villagePT.sort().forEach(v => {
+  // Tri alphabétique “à la française” (accents, apostrophes, etc.)
+  const uniques = Array.from(new Set(VILLAGES)); // au cas où, supprime les doublons
+  uniques.sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base', ignorePunctuation: true }));
+
+  // Option placeholder
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "— Choisir un village —";
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  villageSelect.appendChild(placeholder);
+
+  // Injection des options
+  uniques.forEach(v => {
     const opt = document.createElement("option");
     opt.value = v;
     opt.textContent = v;
@@ -41,14 +99,15 @@ document.getElementById('formulaire').addEventListener('submit', async (e) => {
   confirmation.innerText = data.message;
 
   if (res.status === 409) {
-    confirmation.style.color = "red";    // déjà participé
+    confirmation.style.color = "red";    // déjà participé / bloqué
   } else {
     confirmation.style.color = "green";  // succès
   }
 
   if (res.ok) {
-    await fetchParticipants();                  // recharger la liste
+    await fetchParticipants();
     document.getElementById('formulaire').reset();
+    document.getElementById('village').value = ""; // remettre le placeholder
   }
 });
 
@@ -68,7 +127,6 @@ async function fetchParticipants() {
       container.appendChild(div);
     });
 
-    // ➜ Met à jour le badge compteur à côté du titre
     const badge = document.getElementById('count-badge');
     if (badge) {
       badge.textContent = data.length;
