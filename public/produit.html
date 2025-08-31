@@ -10,7 +10,7 @@
 <body>
   <header>
     <div class="brand">FAVELAS</div>
-    <div class="sub">Voici nos produits disponibles ! Livraison partout dans l'Ile.  </div>
+    <div class="sub">Voici nos produits disponibles ! Livraison partout dans l'Ile.</div>
   </header>
 
   <main class="shell">
@@ -60,33 +60,42 @@
   </div>
 
   <script>
-    // --- Données Produits (3 produits, plusieurs images par produit)
+    // --- Données Produits (4 produits, plusieurs images par produit)
     const PRODUCTS = [
       {
         id:"ts-001", name:"T-shirt Favelas", category:"tshirt", price:20.0,
         colors:["noir","blanc","violet"], sizes:["S","M","L","XL"],
         imgs:[
-          "https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1200&auto=format&fit=crop", // noir
-          "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=1200&auto=format&fit=crop", // blanc
-          "https://images.unsplash.com/photo-1544025161-4fd1b9c2c3e4?q=80&w=1200&auto=format&fit=crop"  // violet (placeholder)
+          "images/tshirt-noir.png",   // noir (mets ton fichier local si tu l'as, sinon laisse Unsplash)
+          "images/tshirt-blanc.png",  // blanc
+          "images/tshirt-violet.png"  // violet
         ]
       },
       {
         id:"bn-001", name:"Bonnet Favelas", category:"bonnet", price:20.0,
-        colors:["noir","bleu","blanc"], sizes:[], // tailles symboliques
+        colors:["noir","jaune","orange","gris"],
+        sizes:[], // pas de tailles pour les bonnets
         imgs:[
-          "https://images.unsplash.com/photo-1516826957135-700dedea698c?q=80&w=1200&auto=format&fit=crop", // noir
-          "https://images.unsplash.com/photo-1516826958535-6c4f706e43d3?q=80&w=1200&auto=format&fit=crop", // bleu
-          "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?q=80&w=1200&auto=format&fit=crop"  // blanc (placeholder)
+          "images/bonnetnoire.png",   // noir
+          "images/bonnetjaune.png",   // jaune
+          "images/bonnetorange.png",  // orange
+          "images/bonnetgris.png"     // gris
         ]
       },
       {
         id:"vs-001", name:"Veste Favelas", category:"veste", price:30.0,
-        colors:["noir","bleu","vert"], sizes:["M","L","XL"],
+        colors:["bleu","orange"], sizes:["M","L","XL"],
         imgs:[
-          "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1200&auto=format&fit=crop", // noir
-          "https://images.unsplash.com/photo-1544025160-9c1f20bdbc5e?q=80&w=1200&auto=format&fit=crop", // bleu (placeholder)
-          "https://images.unsplash.com/photo-1578932750294-f5075e85f44a?q=80&w=1200&auto=format&fit=crop"  // vert (placeholder)
+          "images/vesteBleu.png",     // bleu
+          "images/vesteOrange.png"    // orange
+        ]
+      },
+      {
+        id:"en-001", name:"Ensemble Favelas", category:"ensemble", price:35.0,
+        colors:["bleu","violet"], sizes:["M","L","XL"],
+        imgs:[
+          "images/ensembleBleu.png",   // bleu
+          "images/ensembleViolet.png"  // violet
         ]
       }
     ];
@@ -118,43 +127,49 @@
     const addFav = document.getElementById("addFav");
 
     function labelForCat(cat){
-      return cat==="tshirt" ? "T-shirt" : cat==="bonnet" ? "Bonnet" : "Veste";
+      if(cat==="tshirt") return "T-shirt";
+      if(cat==="bonnet") return "Bonnet";
+      if(cat==="veste")  return "Veste";
+      if(cat==="ensemble") return "Ensemble";
+      return "Produit";
     }
     function colorToHex(c){
-      const map={noir:"#111", blanc:"#fff", bleu:"#2f6bff", violet:"#8a53ff", vert:"#39d98a"};
+      const map={
+        noir:"#111", blanc:"#fff", bleu:"#2f6bff", violet:"#8a53ff",
+        vert:"#39d98a", jaune:"#ffd447", orange:"#ff7a29", gris:"#9aa0a6"
+      };
       return map[c] || "#888";
     }
 
     // --- Template carte (avec cœur dans l'image)
-function cardTemplate(p){
-  const isFav = favorites.has(p.id);
-  const idx = galleryIndex[p.id] ?? 0;
-  const hasSizes = Array.isArray(p.sizes) && p.sizes.length > 0;
+    function cardTemplate(p){
+      const isFav = favorites.has(p.id);
+      const idx = galleryIndex[p.id] ?? 0;
+      const hasSizes = Array.isArray(p.sizes) && p.sizes.length > 0;
 
-  const colorDots = (p.colors||[]).map((c,i) =>
-    `<span class="sw" data-idx="${i}" title="${c}" style="background:${colorToHex(c)}"></span>`
-  ).join("");
+      const colorDots = (p.colors||[]).map((c,i) =>
+        `<span class="sw" data-idx="${i}" title="${c}" style="background:${colorToHex(c)}"></span>`
+      ).join("");
 
-  return `
-    <article class="card" data-id="${p.id}" data-category="${p.category}" data-price="${p.price}">
-      <div class="thumb" data-id="${p.id}">
-        <img src="${p.imgs[idx]}" alt="${p.name}" loading="lazy" />
-        <span class="badge">${labelForCat(p.category)}</span>
-        <button class="heart ${isFav ? "active" : ""}" data-id="${p.id}" aria-label="${isFav ? "Retirer des favoris" : "Ajouter aux favoris"}" title="${isFav ? "Retirer des favoris" : "Ajouter aux favoris"}">♥</button>
-      </div>
-      <div class="body">
-        <div class="title">${p.name}</div>
-        <div class="price">${fmt(p.price)}</div>
-        <div class="swatches">${colorDots}</div>
-        ${hasSizes ? `<div class="meta">Tailles: ${p.sizes.join(" · ")}</div>` : ``}
-        <div class="actions">
-          <button class="btn open">Détails</button>
-        </div>
-      </div>
-    </article>
-  `;
-}
-
+      return `
+        <article class="card" data-id="${p.id}" data-category="${p.category}" data-price="${p.price}">
+          <div class="thumb" data-id="${p.id}">
+            <img src="${p.imgs[idx]}" alt="${p.name}" loading="lazy" />
+            <span class="badge">${labelForCat(p.category)}</span>
+            <button class="heart ${isFav ? "active" : ""}" data-id="${p.id}" aria-label="${isFav ? "Retirer des favoris" : "Ajouter aux favoris"}" title="${isFav ? "Retirer des favoris" : "Ajouter aux favoris"}">♥</button>
+          </div>
+          <div class="body">
+            <div class="title">${p.name}</div>
+            <div class="price">${fmt(p.price)}</div>
+            <div class="swatches">${colorDots}</div>
+            ${hasSizes ? `<div class="meta">Tailles: ${p.sizes.join(" · ")}</div>` : ``}
+            <div class="actions">
+              <button class="btn open">Détails</button>
+            </div>
+          </div>
+        </article>
+      `;
+    }
 
     // --- Rendu de la grille
     function render(){
@@ -213,8 +228,7 @@ function cardTemplate(p){
         }
 
         thumb.addEventListener("click", (e)=>{
-          // Ne pas avancer si on a cliqué sur le cœur
-          if(e.target.closest(".heart")) return;
+          if(e.target.closest(".heart")) return; // clic sur le cœur = pas de slide
           const rect = thumb.getBoundingClientRect();
           const half = rect.left + rect.width/2;
           const p = PRODUCTS.find(x=>x.id===id);
@@ -256,66 +270,65 @@ function cardTemplate(p){
     }
 
     // --- Modal
-function openModal(id){
-  const p = PRODUCTS.find(x=>x.id===id);
-  if(!p) return;
-  const currentIdx = galleryIndex[id] ?? 0;
-  const hasSizes = Array.isArray(p.sizes) && p.sizes.length > 0;
+    function openModal(id){
+      const p = PRODUCTS.find(x=>x.id===id);
+      if(!p) return;
+      const currentIdx = galleryIndex[id] ?? 0;
+      const hasSizes = Array.isArray(p.sizes) && p.sizes.length > 0;
 
-  modalState = {
-    id: p.id,
-    size: hasSizes ? (p.sizes[0] || null) : null,
-    color: p.colors[currentIdx] || p.colors[0] || null,
-    imgIndex: currentIdx
-  };
+      modalState = {
+        id: p.id,
+        size: hasSizes ? (p.sizes[0] || null) : null,
+        color: p.colors[currentIdx] || p.colors[0] || null,
+        imgIndex: currentIdx
+      };
 
-  modalImg.src = p.imgs[currentIdx];
-  modalName.textContent = p.name;
-  modalPrice.textContent = fmt(p.price);
-  modalMeta.textContent = `${labelForCat(p.category)} · Couleurs: ${p.colors.join(" / ")}`;
+      modalImg.src = p.imgs[currentIdx];
+      modalName.textContent = p.name;
+      modalPrice.textContent = fmt(p.price);
+      modalMeta.textContent = `${labelForCat(p.category)} · Couleurs: ${p.colors.join(" / ")}`;
 
-  // Champ "Tailles disponibles"
-  const sizeField = sizeChips.parentElement; // le <div class="field"> parent
-  if(!hasSizes){
-    sizeField.style.display = "none";
-    sizeChips.innerHTML = "";
-  }else{
-    sizeField.style.display = "";
-    sizeChips.innerHTML = p.sizes.map(s => `<button class="chip ${s===modalState.size?"active":""}" data-size="${s}">${s}</button>`).join("");
-    sizeChips.querySelectorAll(".chip").forEach(ch=>{
-      ch.addEventListener("click", ()=>{
-        sizeChips.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));
-        ch.classList.add("active");
-        modalState.size = ch.dataset.size;
+      // Champ "Tailles disponibles"
+      const sizeField = sizeChips.parentElement; // le <div class="field"> parent
+      if(!hasSizes){
+        sizeField.style.display = "none";
+        sizeChips.innerHTML = "";
+      }else{
+        sizeField.style.display = "";
+        sizeChips.innerHTML = p.sizes.map(s => `<button class="chip ${s===modalState.size?"active":""}" data-size="${s}">${s}</button>`).join("");
+        sizeChips.querySelectorAll(".chip").forEach(ch=>{
+          ch.addEventListener("click", ()=>{
+            sizeChips.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));
+            ch.classList.add("active");
+            modalState.size = ch.dataset.size;
+          });
+        });
+      }
+
+      // Pastilles couleur (changent l'image)
+      modalSwatches.innerHTML = p.colors.map((c,i) => `
+        <span class="sw" data-idx="${i}" data-color="${c}" title="${c}"
+              style="width:22px;height:22px;cursor:pointer;background:${colorToHex(c)};border:2px solid #ffffff44"></span>
+      `).join("");
+      modalSwatches.querySelectorAll(".sw").forEach(sw=>{
+        sw.addEventListener("click", ()=>{
+          modalSwatches.querySelectorAll(".sw").forEach(s=>s.style.outline="1px solid #0000");
+          sw.style.outline="2px solid #fff8";
+          const i = Number(sw.dataset.idx);
+          modalState.color = sw.dataset.color;
+          modalState.imgIndex = i;
+          modalImg.src = p.imgs[i] || p.imgs[0];
+        });
       });
-    });
-  }
 
-  // Pastilles couleur (changent l'image)
-  modalSwatches.innerHTML = p.colors.map((c,i) => `
-    <span class="sw" data-idx="${i}" data-color="${c}" title="${c}"
-          style="width:22px;height:22px;cursor:pointer;background:${colorToHex(c)};border:2px solid #ffffff44"></span>
-  `).join("");
-  modalSwatches.querySelectorAll(".sw").forEach(sw=>{
-    sw.addEventListener("click", ()=>{
-      modalSwatches.querySelectorAll(".sw").forEach(s=>s.style.outline="1px solid #0000");
-      sw.style.outline="2px solid #fff8";
-      const i = Number(sw.dataset.idx);
-      modalState.color = sw.dataset.color;
-      modalState.imgIndex = i;
-      modalImg.src = p.imgs[i] || p.imgs[0];
-    });
-  });
+      // Sélection visuelle de la couleur courante
+      const currentSw = modalSwatches.querySelector(`.sw[data-idx="${currentIdx}"]`) || modalSwatches.querySelector(".sw");
+      if(currentSw){ currentSw.click(); }
 
-  // Sélection visuelle de la couleur courante
-  const currentSw = modalSwatches.querySelector(`.sw[data-idx="${currentIdx}"]`) || modalSwatches.querySelector(".sw");
-  if(currentSw){ currentSw.click(); }
-
-  qty.value = 1;
-  modalWrap.style.display = "grid";
-  modalWrap.setAttribute("aria-hidden","false");
-}
-
+      qty.value = 1;
+      modalWrap.style.display = "grid";
+      modalWrap.setAttribute("aria-hidden","false");
+    }
 
     function close(){
       modalWrap.style.display = "none";
@@ -324,24 +337,23 @@ function openModal(id){
     closeModal.addEventListener("click", close);
     modalWrap.addEventListener("click", (e)=>{ if(e.target===modalWrap) close(); });
 
-askQuote.addEventListener("click", ()=>{
-  const p = PRODUCTS.find(x=>x.id===modalState.id);
-  const q = Number(qty.value||1);
+    askQuote.addEventListener("click", ()=>{
+      const p = PRODUCTS.find(x=>x.id===modalState.id);
+      const q = Number(qty.value||1);
 
-  const parts = [];
-  if (modalState.size) parts.push(modalState.size);
-  if (modalState.color) parts.push(modalState.color);
+      const parts = [];
+      if (modalState.size) parts.push(modalState.size);
+      if (modalState.color) parts.push(modalState.color);
 
-  const subject = encodeURIComponent(`Devis ${p.name}${parts.length ? ` (${parts.join(', ')})` : ''} x${q}`);
+      const subject = encodeURIComponent(`Devis ${p.name}${parts.length ? ` (${parts.join(', ')})` : ''} x${q}`);
 
-  let body = `Bonjour,\n\nJe souhaite un devis pour:\n- Produit: ${p.name}`;
-  if (modalState.color) body += `\n- Couleur: ${modalState.color}`;
-  if (modalState.size)  body += `\n- Taille: ${modalState.size}`;
-  body += `\n- Quantité: ${q}\n\nMarque: FAVELAS\nMerci !`;
+      let body = `Bonjour,\n\nJe souhaite un devis pour:\n- Produit: ${p.name}`;
+      if (modalState.color) body += `\n- Couleur: ${modalState.color}`;
+      if (modalState.size)  body += `\n- Taille: ${modalState.size}`;
+      body += `\n- Quantité: ${q}\n\nMarque: FAVELAS\nMerci !`;
 
-  window.location.href = `mailto:contact@favelas.brand?subject=${subject}&body=${encodeURIComponent(body)}`;
-});
-
+      window.location.href = `mailto:contact@favelas.brand?subject=${subject}&body=${encodeURIComponent(body)}`;
+    });
 
     addFav.addEventListener("click", ()=>{
       if(!modalState.id) return;
