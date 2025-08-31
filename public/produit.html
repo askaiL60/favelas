@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Favelas – Produits</title>
+  <link href="https://fonts.googleapis.com/css2?family=Permanent+Marker&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="produit.css">
+</head>
+<body>
+  <header>
+    <div class="brand">FAVELAS</div>
+    <div class="sub">Voici nos produits disponibles ! Livraison partout dans l'Ile.  </div>
+  </header>
+
+  <main class="shell">
+    <!-- Grid -->
+    <div id="grid" class="grid"></div>
+    <div id="emptyState" class="empty" style="display:none">Rien à afficher.</div>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal-wrap" id="modalWrap" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <div class="modal-title" id="modalTitle">Détails du produit</div>
+        <button class="x" id="closeModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="big"><img id="modalImg" alt="" /></div>
+        <div>
+          <div class="title" id="modalName"></div>
+          <div class="price" id="modalPrice"></div>
+          <div class="meta" id="modalMeta"></div>
+
+          <div class="field">
+            <div class="label">Tailles disponibles</div>
+            <div class="sizes" id="sizeChips"></div>
+          </div>
+
+          <div class="field">
+            <div class="label">Couleurs</div>
+            <div class="swatches" id="modalSwatches"></div>
+          </div>
+
+          <div class="field">
+            <div class="label">Quantité</div>
+            <div class="qty">
+              <input id="qty" type="number" min="1" value="1" />
+              <span class="note">Pour devis/collab, clique sur “Demander”.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="askQuote">Demander un devis</button>
+        <button class="btn primary" id="addFav">Ajouter aux favoris</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Données Produits (3 produits, plusieurs images par produit)
+    const PRODUCTS = [
+      {
+        id:"ts-001", name:"T-shirt Favelas", category:"tshirt", price:20.0,
+        colors:["noir","blanc","violet"], sizes:["S","M","L","XL"],
+        imgs:[
+          "https://images.unsplash.com/photo-1520975916090-3105956dac38?q=80&w=1200&auto=format&fit=crop", // noir
+          "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?q=80&w=1200&auto=format&fit=crop", // blanc
+          "https://images.unsplash.com/photo-1544025161-4fd1b9c2c3e4?q=80&w=1200&auto=format&fit=crop"  // violet (placeholder)
+        ]
+      },
+      {
+        id:"bn-001", name:"Bonnet Favelas", category:"bonnet", price:20.0,
+        colors:["noir","bleu","blanc"], sizes:[], // tailles symboliques
+        imgs:[
+          "https://images.unsplash.com/photo-1516826957135-700dedea698c?q=80&w=1200&auto=format&fit=crop", // noir
+          "https://images.unsplash.com/photo-1516826958535-6c4f706e43d3?q=80&w=1200&auto=format&fit=crop", // bleu
+          "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?q=80&w=1200&auto=format&fit=crop"  // blanc (placeholder)
+        ]
+      },
+      {
+        id:"vs-001", name:"Veste Favelas", category:"veste", price:30.0,
+        colors:["noir","bleu","vert"], sizes:["M","L","XL"],
+        imgs:[
+          "https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1200&auto=format&fit=crop", // noir
+          "https://images.unsplash.com/photo-1544025160-9c1f20bdbc5e?q=80&w=1200&auto=format&fit=crop", // bleu (placeholder)
+          "https://images.unsplash.com/photo-1578932750294-f5075e85f44a?q=80&w=1200&auto=format&fit=crop"  // vert (placeholder)
+        ]
+      }
+    ];
+
+    // --- Utilitaires
+    const fmt = n => new Intl.NumberFormat("fr-FR",{style:"currency",currency:"EUR"}).format(n);
+    const clamp = (n,min,max)=> Math.max(min, Math.min(max,n));
+
+    // --- État
+    let favorites = new Set(JSON.parse(localStorage.getItem("fav:products") || "[]"));
+    let modalState = { id:null, size:null, color:null, imgIndex:0 };
+    const galleryIndex = {}; // {productId: currentImgIndex}
+
+    // --- Sélecteurs
+    const grid = document.getElementById("grid");
+    const emptyState = document.getElementById("emptyState");
+
+    // Modal
+    const modalWrap = document.getElementById("modalWrap");
+    const closeModal = document.getElementById("closeModal");
+    const modalImg = document.getElementById("modalImg");
+    const modalName = document.getElementById("modalName");
+    const modalPrice = document.getElementById("modalPrice");
+    const modalMeta = document.getElementById("modalMeta");
+    const sizeChips = document.getElementById("sizeChips");
+    const modalSwatches = document.getElementById("modalSwatches");
+    const qty = document.getElementById("qty");
+    const askQuote = document.getElementById("askQuote");
+    const addFav = document.getElementById("addFav");
+
+    function labelForCat(cat){
+      return cat==="tshirt" ? "T-shirt" : cat==="bonnet" ? "Bonnet" : "Veste";
+    }
+    function colorToHex(c){
+      const map={noir:"#111", blanc:"#fff", bleu:"#2f6bff", violet:"#8a53ff", vert:"#39d98a"};
+      return map[c] || "#888";
+    }
+
+    // --- Template carte (avec cœur dans l'image)
+function cardTemplate(p){
+  const isFav = favorites.has(p.id);
+  const idx = galleryIndex[p.id] ?? 0;
+  const hasSizes = Array.isArray(p.sizes) && p.sizes.length > 0;
+
+  const colorDots = (p.colors||[]).map((c,i) =>
+    `<span class="sw" data-idx="${i}" title="${c}" style="background:${colorToHex(c)}"></span>`
+  ).join("");
+
+  return `
+    <article class="card" data-id="${p.id}" data-category="${p.category}" data-price="${p.price}">
+      <div class="thumb" data-id="${p.id}">
+        <img src="${p.imgs[idx]}" alt="${p.name}" loading="lazy" />
+        <span class="badge">${labelForCat(p.category)}</span>
+        <button class="heart ${isFav ? "active" : ""}" data-id="${p.id}" aria-label="${isFav ? "Retirer des favoris" : "Ajouter aux favoris"}" title="${isFav ? "Retirer des favoris" : "Ajouter aux favoris"}">♥</button>
+      </div>
+      <div class="body">
+        <div class="title">${p.name}</div>
+        <div class="price">${fmt(p.price)}</div>
+        <div class="swatches">${colorDots}</div>
+        ${hasSizes ? `<div class="meta">Tailles: ${p.sizes.join(" · ")}</div>` : ``}
+        <div class="actions">
+          <button class="btn open">Détails</button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+
+    // --- Rendu de la grille
+    function render(){
+      const list = [...PRODUCTS];
+
+      grid.innerHTML = list.map(cardTemplate).join("");
+      emptyState.style.display = list.length ? "none" : "block";
+
+      // Ouvrir modal
+      grid.querySelectorAll(".open").forEach(btn=>{
+        btn.addEventListener("click", (e)=>{
+          const card = e.target.closest(".card");
+          openModal(card.dataset.id);
+        });
+      });
+
+      // Cœur favoris (overlay)
+      grid.querySelectorAll(".heart").forEach(btn=>{
+        btn.addEventListener("click", (e)=>{
+          e.stopPropagation(); // ne pas déclencher le changement d’image
+          const id = btn.dataset.id;
+          toggleFav(id);
+          btn.classList.toggle("active", favorites.has(id));
+          btn.setAttribute("aria-label", favorites.has(id) ? "Retirer des favoris" : "Ajouter aux favoris");
+          btn.title = favorites.has(id) ? "Retirer des favoris" : "Ajouter aux favoris";
+        });
+      });
+
+      // Pastilles couleur → change l’image affichée
+      grid.querySelectorAll(".card").forEach(card=>{
+        const id = card.dataset.id;
+        const thumb = card.querySelector(".thumb");
+        const img = thumb.querySelector("img");
+        card.querySelectorAll(".swatches .sw").forEach(sw=>{
+          sw.addEventListener("click", (e)=>{
+            const i = Number(sw.dataset.idx);
+            galleryIndex[id] = i;
+            const p = PRODUCTS.find(x=>x.id===id);
+            img.src = p.imgs[i] || p.imgs[0];
+          });
+        });
+      });
+
+      // Navigation d'image: clic gauche/droit + molette + swipe
+      grid.querySelectorAll(".thumb").forEach(thumb=>{
+        const id = thumb.dataset.id;
+        let startX = null;
+
+        function show(idx){
+          const p = PRODUCTS.find(x=>x.id===id);
+          if(!p) return;
+          const newIdx = clamp(idx, 0, p.imgs.length-1);
+          galleryIndex[id] = newIdx;
+          const img = thumb.querySelector("img");
+          img.src = p.imgs[newIdx];
+        }
+
+        thumb.addEventListener("click", (e)=>{
+          // Ne pas avancer si on a cliqué sur le cœur
+          if(e.target.closest(".heart")) return;
+          const rect = thumb.getBoundingClientRect();
+          const half = rect.left + rect.width/2;
+          const p = PRODUCTS.find(x=>x.id===id);
+          const curr = galleryIndex[id] ?? 0;
+          if(!p) return;
+          show(e.clientX < half ? curr - 1 : curr + 1);
+        }, {passive:true});
+
+        thumb.addEventListener("wheel", (e)=>{
+          e.preventDefault();
+          const p = PRODUCTS.find(x=>x.id===id);
+          if(!p) return;
+          const curr = galleryIndex[id] ?? 0;
+          show(e.deltaY > 0 ? curr + 1 : curr - 1);
+        }, {passive:false});
+
+        thumb.addEventListener("touchstart", (e)=>{
+          startX = e.touches[0].clientX;
+        }, {passive:true});
+        thumb.addEventListener("touchend", (e)=>{
+          if(startX===null) return;
+          const endX = e.changedTouches[0].clientX;
+          const dx = endX - startX;
+          const p = PRODUCTS.find(x=>x.id===id);
+          const curr = galleryIndex[id] ?? 0;
+          if(!p) return;
+          if(Math.abs(dx) > 30){
+            show(dx < 0 ? curr + 1 : curr - 1);
+          }
+          startX = null;
+        }, {passive:true});
+      });
+    }
+
+    // --- Favoris
+    function toggleFav(id){
+      if(favorites.has(id)) favorites.delete(id); else favorites.add(id);
+      localStorage.setItem("fav:products", JSON.stringify(Array.from(favorites)));
+    }
+
+    // --- Modal
+function openModal(id){
+  const p = PRODUCTS.find(x=>x.id===id);
+  if(!p) return;
+  const currentIdx = galleryIndex[id] ?? 0;
+  const hasSizes = Array.isArray(p.sizes) && p.sizes.length > 0;
+
+  modalState = {
+    id: p.id,
+    size: hasSizes ? (p.sizes[0] || null) : null,
+    color: p.colors[currentIdx] || p.colors[0] || null,
+    imgIndex: currentIdx
+  };
+
+  modalImg.src = p.imgs[currentIdx];
+  modalName.textContent = p.name;
+  modalPrice.textContent = fmt(p.price);
+  modalMeta.textContent = `${labelForCat(p.category)} · Couleurs: ${p.colors.join(" / ")}`;
+
+  // Champ "Tailles disponibles"
+  const sizeField = sizeChips.parentElement; // le <div class="field"> parent
+  if(!hasSizes){
+    sizeField.style.display = "none";
+    sizeChips.innerHTML = "";
+  }else{
+    sizeField.style.display = "";
+    sizeChips.innerHTML = p.sizes.map(s => `<button class="chip ${s===modalState.size?"active":""}" data-size="${s}">${s}</button>`).join("");
+    sizeChips.querySelectorAll(".chip").forEach(ch=>{
+      ch.addEventListener("click", ()=>{
+        sizeChips.querySelectorAll(".chip").forEach(c=>c.classList.remove("active"));
+        ch.classList.add("active");
+        modalState.size = ch.dataset.size;
+      });
+    });
+  }
+
+  // Pastilles couleur (changent l'image)
+  modalSwatches.innerHTML = p.colors.map((c,i) => `
+    <span class="sw" data-idx="${i}" data-color="${c}" title="${c}"
+          style="width:22px;height:22px;cursor:pointer;background:${colorToHex(c)};border:2px solid #ffffff44"></span>
+  `).join("");
+  modalSwatches.querySelectorAll(".sw").forEach(sw=>{
+    sw.addEventListener("click", ()=>{
+      modalSwatches.querySelectorAll(".sw").forEach(s=>s.style.outline="1px solid #0000");
+      sw.style.outline="2px solid #fff8";
+      const i = Number(sw.dataset.idx);
+      modalState.color = sw.dataset.color;
+      modalState.imgIndex = i;
+      modalImg.src = p.imgs[i] || p.imgs[0];
+    });
+  });
+
+  // Sélection visuelle de la couleur courante
+  const currentSw = modalSwatches.querySelector(`.sw[data-idx="${currentIdx}"]`) || modalSwatches.querySelector(".sw");
+  if(currentSw){ currentSw.click(); }
+
+  qty.value = 1;
+  modalWrap.style.display = "grid";
+  modalWrap.setAttribute("aria-hidden","false");
+}
+
+
+    function close(){
+      modalWrap.style.display = "none";
+      modalWrap.setAttribute("aria-hidden","true");
+    }
+    closeModal.addEventListener("click", close);
+    modalWrap.addEventListener("click", (e)=>{ if(e.target===modalWrap) close(); });
+
+askQuote.addEventListener("click", ()=>{
+  const p = PRODUCTS.find(x=>x.id===modalState.id);
+  const q = Number(qty.value||1);
+
+  const parts = [];
+  if (modalState.size) parts.push(modalState.size);
+  if (modalState.color) parts.push(modalState.color);
+
+  const subject = encodeURIComponent(`Devis ${p.name}${parts.length ? ` (${parts.join(', ')})` : ''} x${q}`);
+
+  let body = `Bonjour,\n\nJe souhaite un devis pour:\n- Produit: ${p.name}`;
+  if (modalState.color) body += `\n- Couleur: ${modalState.color}`;
+  if (modalState.size)  body += `\n- Taille: ${modalState.size}`;
+  body += `\n- Quantité: ${q}\n\nMarque: FAVELAS\nMerci !`;
+
+  window.location.href = `mailto:contact@favelas.brand?subject=${subject}&body=${encodeURIComponent(body)}`;
+});
+
+
+    addFav.addEventListener("click", ()=>{
+      if(!modalState.id) return;
+      toggleFav(modalState.id);
+      addFav.textContent = favorites.has(modalState.id) ? "Ajouté ✓" : "Ajouter aux favoris";
+      setTimeout(()=>{ addFav.textContent = "Ajouter aux favoris"; }, 1200);
+      render(); // rafraîchit l’état des cœurs sur les cartes
+    });
+
+    // --- Init
+    render();
+  </script>
+</body>
+</html>
