@@ -116,3 +116,14 @@
   color: #07121a; border-color: transparent; box-shadow: 0 0 0 2px #8a7dff55, 0 10px 25px -10px #8a7dffaa;
 }
 .thumb .heart:focus-visible{ outline: 2px solid #ffffffcc; outline-offset: 2px; }
+
+.filigrane {
+  text-align: center;
+  margin-top: 40px;
+  opacity: 1;
+}
+
+.filigrane img {
+  width: 200px;
+  height: auto;
+}

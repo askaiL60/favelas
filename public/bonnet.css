@@ -1,0 +1,241 @@
+/* =======================
+   Thème & décor global (ciel étoilé + vagues)
+   ======================= */
+:root{
+  --bg1:#0b0f1a;      /* nuit profonde */
+  --bg2:#111a2e;      /* dégradé */
+  --accent:#00d0ff;   /* cyan */
+  --accent2:#7c5cff;  /* violet */
+}
+
+/* Le fond reste transparent pour voir les calques */
+body.bonnets{
+  position: relative;
+  min-height: 100vh;
+  background: transparent !important;
+  overflow-x: hidden;
+}
+
+/* Calque ciel étoilé derrière tout le contenu */
+.sky-layer{position:fixed; inset:0; pointer-events:none; z-index:-3;}
+.sky-gradient{
+  background: radial-gradient(1200px 800px at 70% -10%, #1f2b4b33, transparent),
+              linear-gradient(180deg, var(--bg1), var(--bg2));
+}
+.stars, .twinkles{position:absolute; inset:0;}
+.stars:after{
+  content:"";
+  position:absolute; top:0; left:0; width:3px; height:2px; background:#fff;
+  box-shadow:
+    20vw 10vh #fff, 40vw 30vh #fff, 60vw 15vh #fff, 80vw 40vh #fff,
+    10vw 50vh #fff, 30vw 70vh #fff, 55vw 65vh #fff, 75vw 80vh #fff,
+    15vw 85vh #fff, 45vw 90vh #fff, 85vw 22vh #fff, 5vw 25vh #fff,
+    25vw 12vh #fff, 70vw 10vh #fff, 90vw 70vh #fff, 50vw 40vh #fff;
+  opacity:.7; filter:blur(.2px);
+  animation: starsDrift 120s linear infinite;
+}
+@keyframes starsDrift{
+  0%{transform:translateY(0)} 100%{transform:translateY(10vh)}
+}
+.twinkles:after{
+  content:""; position:absolute; inset:0;
+  background:
+    radial-gradient(4px 4px at 20% 30%, #ffffffcc 0 40%, transparent 41%),
+    radial-gradient(3px 3px at 65% 20%, #ffffffcc 0 40%, transparent 41%),
+    radial-gradient(3px 3px at 80% 70%, #ffffffcc 0 40%, transparent 41%),
+    radial-gradient(3px 3px at 30% 80%, #ffffffcc 0 40%, transparent 41%);
+  animation: twinkle 2.8s ease-in-out infinite;
+}
+@keyframes twinkle{0%,100%{opacity:.35} 50%{opacity:.85}}
+
+.shooting-star{
+  position:absolute; top:-10vh; left:15vw; width:120px; height:2px;
+  background:linear-gradient(90deg, #fff, transparent);
+  transform:rotate(15deg);
+  opacity:0; filter:drop-shadow(0 0 6px #fff);
+  animation: shoot 6s linear infinite; animation-delay: 6s;
+}
+.shooting-star:nth-child(2){ left:70vw; transform:rotate(-20deg); animation-delay: 5s;}
+.shooting-star:nth-child(3){ left:40vw; transform:rotate(10deg);  animation-delay: 9s;}
+@keyframes shoot{
+  0%{opacity:0; transform:translate3d(0,0,0) rotate(var(--r,15deg))}
+  5%{opacity:1}
+  40%{transform:translate3d(35vw,25vh,0) rotate(var(--r,15deg))}
+  60%{opacity:0}
+  100%{opacity:0}
+}
+
+/* Vagues haut/bas (derrière le contenu) */
+.waves-top, .waves-bottom{
+  position:fixed; left:0; width:100%; pointer-events:none; z-index:-2;
+}
+.waves-top{ top:0; transform:translateY(-1px);}
+.waves-bottom{ bottom:0; transform:translateY(1px);}
+.waves-top svg, .waves-bottom svg{ display:block; width:100%; height:auto;}
+.waves-grad stop:nth-child(1){ stop-color: var(--accent); }
+.waves-grad stop:nth-child(2){ stop-color: var(--accent2); }
+.wave-path{ animation: waveMove 12s ease-in-out infinite alternate; }
+@keyframes waveMove{ 0%{ transform:translateX(0)} 100%{ transform:translateX(-40px)} }
+
+/* Assure que le contenu passe AU-DESSUS des calques */
+header, main, footer{ position: relative; z-index: 0; }
+
+/* =======================
+   Cartes produits (grille)
+   ======================= */
+body.bonnets .thumb{
+  position: relative;
+  aspect-ratio: 4 / 5;                 /* hauteur maîtrisée */
+  display: grid;
+  place-items: center;                  /* centre l’image */
+  overflow: hidden;
+  border-radius: var(--radius, 18px);
+  background: radial-gradient(120% 100% at 50% 10%, #162042, #0d1328 70%);
+  box-shadow: inset 0 0 0 1px #1a2240;
+  transform-style: preserve-3d;
+  transition: transform .25s ease;
+}
+
+body.bonnets .thumb img{
+  width: 92%;
+  height: 92%;
+  object-fit: contain;                  /* >>> ne coupe plus le produit */
+  object-position: center;
+  display: block;
+  transition: transform .25s ease, filter .25s ease;
+  will-change: transform;
+}
+
+/* Survol = zoom doux + ombre (désactivé sur mobile) */
+@media (hover:hover){
+  body.bonnets .thumb:hover img{
+    transform: scale(1.06) translateY(-2px);
+    filter: drop-shadow(0 14px 22px rgba(0,0,0,.35));
+  }
+}
+/* Mobile/touch : léger feedback au tap */
+@media (hover:none){
+  body.bonnets .thumb:active img{ transform: scale(1.03); }
+}
+
+/* Cœur favoris en overlay */
+body.bonnets .thumb .heart{
+  position: absolute;
+  top: 10px; right: 10px;
+  border: 1px solid #2b2f55;
+  background: #0a0f2acc;
+  color: #cdd6ff;
+  width: 36px; height: 36px;
+  border-radius: 999px;
+  display: grid; place-items: center;
+  cursor: pointer;
+  font-size: 18px; line-height: 1;
+  transition: transform .15s ease, filter .15s ease, background .15s ease, border-color .15s ease;
+}
+body.bonnets .thumb .heart:hover{ filter: brightness(1.1); transform: translateY(-1px); }
+body.bonnets .thumb .heart.active{
+  background: linear-gradient(90deg, var(--acc, #8a7dff), var(--acc2, #5ce1e6));
+  color: #07121a; border-color: transparent;
+  box-shadow: 0 0 0 2px #8a7dff55, 0 10px 25px -10px #8a7dffaa;
+}
+
+/* Pastilles couleur */
+body.bonnets .swatches .sw{
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  border: 2px solid #ffffff22;
+  outline: 1px solid #00000022;
+}
+
+/* =======================
+   Modal (grand visuel)
+   ======================= */
+body.bonnets .modal-body .big{
+  background: #11163a;
+  border-radius: 14px;
+  aspect-ratio: 1 / 1;                  /* carré */
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+body.bonnets .modal-body .big img{
+  width: 100%;
+  height: 100%;
+  object-fit: contain;                   /* pas de recadrage dans le modal */
+  object-position: center;
+  padding: 8px;
+}
+
+/* Description dans le modal (quand présente) */
+body.bonnets .modal-body .desc{
+  margin: 4px 0 6px;
+  opacity: .9;
+}
+
+/* Responsive : modal en colonne sur petit écran */
+@media (max-width: 900px){
+  body.bonnets .modal-body { grid-template-columns: 1fr !important; }
+  body.bonnets .modal-body .big { aspect-ratio: 4 / 3; }
+}
+
+/* =======================
+   Footer Contact
+   ======================= */
+body.bonnets .contact-footer{
+  width: min(1000px, 92vw);
+  margin: 28px auto 80px;
+  background: rgba(10,15,42,.6);
+  border: 1px solid #2b2f55;
+  border-radius: 16px;
+  padding: 18px 20px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  color: #cdd6ff;
+}
+body.bonnets .contact-title{
+  margin: 0 0 4px 0;
+  font-size: clamp(20px, 3.5vw, 28px);
+}
+body.bonnets .contact-sub{
+  margin: 0 0 14px 0;
+  opacity: .85;
+}
+body.bonnets .contact-actions{
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+body.bonnets .contact-btn{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  color: #0b0f1a;
+  background: #eef3ff;
+  border: 1px solid #c2c9ff;
+  transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
+}
+body.bonnets .contact-btn:hover{
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+  box-shadow: 0 8px 22px -10px rgba(124,92,255,.45);
+}
+/* Variantes */
+body.bonnets .contact-btn.ig{
+  background: #0b0f1a;
+  color: #ffffff;
+  border-color: #883ffdbc;
+}
+body.bonnets .contact-btn.sc{
+  background: #0b0f1a;
+  color: #ffffff;
+  border-color: #e2da00b4;
+}
+/* Mobile */
+@media (max-width: 640px){
+  body.bonnets .contact-actions{ flex-direction: column; }
+  body.bonnets .contact-btn{ justify-content: center; }
+}

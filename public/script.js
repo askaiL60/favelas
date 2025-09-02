@@ -1,86 +1,58 @@
-// --- Liste complète des villages/localités de Mayotte ---
-const VILLAGES = [
-  // Acoua
-  "Acoua", "Mtsangadoua",
-
-  // Bandraboua
-  "Bandraboua", "Handrema", "Mtsangamboua",
-
-  // Bandrélé
-  "Bandrélé", "Hamouro", "Dapani", "Mtsamoudou",
-
-  // Bouéni
-  "Bouéni", "Bambo-Ouest", "Mbouanatsa", "Majiméouni", "Mzouazia", "Hagnoundrou",
-
-  // Chiconi
-  "Chiconi", "Miréréni",
-
-  // Chirongui
-  "Chirongui", "Mramadoudou", "Poroani", "Tsimkoura", "Bambo-Est",
-
-  // Dembéni
-  "Dembéni", "Iloni", "Tsararano",
-
-  // Dzaoudzi-Labattoir (Petite-Terre)
-  "Dzaoudzi", "Labattoir",
-
-  // Kani-Kéli
-  "Kani-Kéli", "Passy-Kéli",
-
-  // Koungou
-  "Koungou", "Majicavo Lamir", "Majicavo Koropa", "Longoni", "Trévani",
-
-  // Mamoudzou
-  "Mamoudzou", "Cavani", "Vahibé", "Passamainty", "M’Tsapéré", "Kawéni", "Tsoundzou 1", "Tsoundzou 2",
-
-  // Mtsamboro
-  "Mtsamboro", "Hamjago", "Mtsahara",
-
-  // M’Tsangamouji
-  "M’Tsangamouji", "Mliha",
-
-  // Ouangani
-  "Ouangani", "Coconi", "Kahani",
-
-  // Pamandzi (Petite-Terre)
-  "Pamandzi",
-
-  // Sada
-  "Sada", "Mangajou",
-
-  // Tsingoni
-  "Tsingoni", "Combani", "Mroalé"
+// —— Fallback local si l'API des villages ne répond pas
+const VILLAGES_FALLBACK = [
+  "Acoua","Mtsangadoua","Bandraboua","Handrema","Mtsangamboua","Bandrélé","Hamouro","Dapani","Mtsamoudou",
+  "Bouéni","Bambo-Ouest","Mbouanatsa","Majiméouni","Mzouazia","Hagnoundrou","Chiconi","Miréréni","Chirongui",
+  "Mramadoudou","Poroani","Tsimkoura","Bambo-Est","Dembéni","Iloni","Tsararano","Dzaoudzi","Labattoir",
+  "Kani-Kéli","Passy-Kéli","Koungou","Majicavo Lamir","Majicavo Koropa","Longoni","Trévani","Mamoudzou",
+  "Cavani","Vahibé","Passamainty","M’Tsapéré","Kawéni","Mtsamboro","Hamjago","Mtsahara","M’Tsangamouji",
+  "Mliha","Ouangani","Coconi","Kahani","Pamandzi","Sada","Mangajou","Tsingoni","Combani","Mroalé",
+  "Vahibé","Tsoundzou 1","Tsoundzou 2","Passamainty","Vahibé"
 ];
 
-window.addEventListener("DOMContentLoaded", () => {
-  const villageSelect = document.getElementById("village");
-  if (!villageSelect) return;
+window.addEventListener("DOMContentLoaded", async () => {
+  await populateVillages();
+  await fetchParticipants();
 
-  // Tri alphabétique “à la française” (accents, apostrophes, etc.)
-  const uniques = Array.from(new Set(VILLAGES)); // au cas où, supprime les doublons
-  uniques.sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base', ignorePunctuation: true }));
+  // Soumission du formulaire
+  document.getElementById('formulaire').addEventListener('submit', onSubmit);
 
-  // Option placeholder
-  const placeholder = document.createElement("option");
-  placeholder.value = "";
-  placeholder.textContent = "Sélectionnez votre village";
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  villageSelect.appendChild(placeholder);
-
-  // Injection des options
-  uniques.forEach(v => {
-    const opt = document.createElement("option");
-    opt.value = v;
-    opt.textContent = v;
-    villageSelect.appendChild(opt);
+  // Bouton "Voir nos produits"
+  const btn = document.getElementById('btnProducts');
+  if (btn) btn.addEventListener('click', () => {
+    window.location.href = 'bonnet.html';
   });
-
-  fetchParticipants();
 });
 
-// Envoi du formulaire
-document.getElementById('formulaire').addEventListener('submit', async (e) => {
+// Remplit la liste des villages (API -> fallback)
+async function populateVillages() {
+  const select = document.getElementById("village");
+  if (!select) return;
+
+  try {
+    const res = await fetch('/api/villages');
+    if (!res.ok) throw new Error('villages api error');
+    const villages = await res.json();
+    injectOptions(select, villages);
+  } catch {
+    const uniques = Array.from(new Set(VILLAGES_FALLBACK));
+    uniques.sort((a,b)=> a.localeCompare(b,'fr',{sensitivity:'base',ignorePunctuation:true}));
+    injectOptions(select, uniques);
+  }
+}
+
+function injectOptions(select, list) {
+  // vide (garde la 1re option placeholder)
+  select.innerHTML = '<option value="">Sélectionnez votre village</option>';
+  list.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = v;
+    select.appendChild(opt);
+  });
+}
+
+// Soumission + redirection vers bonnet.html
+async function onSubmit(e) {
   e.preventDefault();
 
   const prenom  = document.getElementById('prenom').value.trim();
@@ -88,33 +60,47 @@ document.getElementById('formulaire').addEventListener('submit', async (e) => {
   const village = document.getElementById('village').value;
   const taille  = document.getElementById('taille').value;
 
-  const res = await fetch('/submit', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prenom, pseudo, village, taille })
-  });
-
-  const data = await res.json();
   const confirmation = document.getElementById('confirmation');
-  confirmation.innerText = data.message;
 
-  if (res.status === 409) {
-    confirmation.style.color = "red";    // déjà participé / bloqué
-  } else {
-    confirmation.style.color = "green";  // succès
+  if (!prenom || !pseudo || !village || !taille) {
+    confirmation.textContent = "Merci de remplir tous les champs.";
+    confirmation.style.color = "red";
+    return;
   }
 
-  if (res.ok) {
-    await fetchParticipants();
-    document.getElementById('formulaire').reset();
-    document.getElementById('village').value = ""; // remettre le placeholder
+  try {
+    const res = await fetch('/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prenom, pseudo, village, taille })
+    });
+
+    let data = {};
+    try { data = await res.json(); } catch {}
+
+    confirmation.textContent = data.message || (res.ok ? "Participation enregistrée !" : "Erreur serveur");
+    confirmation.style.color = res.ok ? "green" : "red";
+
+    if (res.ok) {
+      // flag pour toast éventuel côté bonnet.html
+      sessionStorage.setItem('contest:ok', '1');
+      window.location.href = 'bonnet.html';
+      return;
+    }
+
+    await fetchParticipants(); // reste sur page et rafraîchit en cas d’erreur
+  } catch (err) {
+    console.error(err);
+    confirmation.textContent = "Impossible de soumettre pour le moment.";
+    confirmation.style.color = "red";
   }
-});
+}
 
 // Récupérer et afficher les participants + MAJ compteur
 async function fetchParticipants() {
   try {
     const res = await fetch('/api/participants');
+    if (!res.ok) throw new Error('participants api error');
     const data = await res.json();
 
     const container = document.getElementById('participants-list');
@@ -123,7 +109,8 @@ async function fetchParticipants() {
     data.forEach(p => {
       const div = document.createElement('div');
       div.className = "participant";
-      div.innerHTML = `${p.prenom} (@${p.pseudo}), ${p.village}`;
+      const safePseudo = (p.pseudo || '').replace(/^@/,'');
+      div.textContent = `${p.prenom} (@${safePseudo}), ${p.village}`;
       container.appendChild(div);
     });
 
